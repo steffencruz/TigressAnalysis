@@ -5,7 +5,7 @@
 #include<RTypes.h>
 #include<TList.h>
 
-#include<TH3F.h>
+#include<TH3S.h>
 #include<TH2F.h>
 #include<TH1D.h>
 #include<THStack.h>
@@ -14,6 +14,7 @@
 #include <string>
 
 // Reads a root file which contains gamma-gamma-excitation energy matrices and carries out coincidence analyses
+// WARNING : THE TH3F
 // * exc gamma gamma
 // * gamma gamma 
 // * exc gamma 
@@ -48,7 +49,7 @@ class TTigressAnalysis 	{
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
 																						
-		static void AnalyzeGammas(Double_t emin, Double_t emax, 
+		static TCanvas *AnalyzeGammas(Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
 											Double_t exmin=-1.0, Double_t exmax=-1.0);
@@ -69,12 +70,12 @@ class TTigressAnalysis 	{
 		static TH2F *TH2Sum(TH2F *ha, TH2F *hb, Double_t sca=1.0, Double_t scb=1.0);
 
 		static TH1D *TH2Proj(TH2F *h, char ax, Double_t minval, Double_t maxval, Double_t &sz);
-		static TH2F *TH3Proj(TH3F *h, std::string ax, Double_t minval, Double_t maxval, Double_t &sz);
+		static TH2F *TH3Proj(TH3S *h, std::string ax, Double_t minval, Double_t maxval, Double_t &sz);
 
 		static Double_t gaus_lbg_exc(Double_t *x, Double_t *par);
 
 		static std::string histfile;
-		static TH3F *hexcgamgam,*hexcthcmgam;
+		static TH3S *hexcgamgam,*hexcthcmgam;
 		static TH2F *hgamgam,*hexcgam;
 		static TH1D *hgam,*hexc;
 		

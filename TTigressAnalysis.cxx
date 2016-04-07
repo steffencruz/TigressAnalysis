@@ -21,8 +21,8 @@ ClassImp(TTigressAnalysis)
 std::string TTigressAnalysis::histfile = "";
 std::string TTigressAnalysis::nndcfile = "";
 
-TH3F *TTigressAnalysis::hexcgamgam = NULL;
-TH3F *TTigressAnalysis::hexcthcmgam = NULL;
+TH3S *TTigressAnalysis::hexcgamgam = NULL;
+TH3S *TTigressAnalysis::hexcthcmgam = NULL;
 
 TH2F *TTigressAnalysis::hgamgam = NULL;
 TH2F *TTigressAnalysis::hexcgam = NULL;
@@ -91,11 +91,12 @@ void TTigressAnalysis::Clear(Option_t *opt) {
 void TTigressAnalysis::LoadHistos(const char *fname){
 	
 	TFile *f1 = new TFile(fname,"READ");
+	printf("\n\t Reading Histos File ' %s ' :\n",fname);
 	
 	if(f1->IsOpen()){
 		histfile.assign(fname);
-    hexcgamgam  = (TH3F*)f1->Get("ExcGamGam_dp"); 
-    hexcthcmgam = (TH3F*)f1->Get("ExcGamThetaCmSmooth_dp"); // fixed!
+    hexcgamgam  = (TH3S*)f1->Get("ExcGamGam_dp"); 
+    hexcthcmgam = (TH3S*)f1->Get("ExcGamThetaCmSmooth_dp"); // fixed!
 		hexcgam 	  = (TH2F*)f1->Get("ExcGam_dp");       
     hgamgam 	  = (TH2F*)f1->Get("GamGam_dp");
     hgam			  = (TH1D*)f1->Get("Gam_dp");
@@ -219,7 +220,7 @@ TH2F *TTigressAnalysis::ExcThetaGated(Double_t emin, Double_t emax, Double_t bg0
 	SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);
 
 	TH2F *hp[4];
-	TH3F *h3 = hexcthcmgam;
+	TH3S *h3 = hexcthcmgam;
 	// x = thcm
 	// y = gam
 	// z = exc
@@ -236,14 +237,7 @@ TH2F *TTigressAnalysis::ExcThetaGated(Double_t emin, Double_t emax, Double_t bg0
   
   // peak - bgtot
   TH2F *het = TH2Sum(hp[0],hp[3],1,-0.5);
- 	/*
-  TCanvas *c = new TCanvas;
-  c->Divide(2,2);
-  c->cd(1); hp[0]->Draw("colz");
-  c->cd(2); hp[1]->Draw("colz");
-  c->cd(3); hp[2]->Draw("colz");
-  c->cd(4); het->Draw("colz");
-  */
+ 	
 	het->RebinY(excbinsz/het->GetYaxis()->GetBinWidth(0));
   het->SetNameTitle("ExcThetaCm",Form("Excitation Energy Versus Theta Cm; Theta Cm [Deg]; Excitation Energy [keV]"));
 
@@ -275,17 +269,18 @@ void TTigressAnalysis::SetBackgroundLims(Double_t emin, Double_t emax, Double_t 
 	return;	
 }
 
-void TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Double_t exc_lo, Double_t exc_hi){
+TCanvas *TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Double_t exc_lo, Double_t exc_hi){
 
+	TCanvas *c = 0;
 	if(!histfile.size()){
 		printf("\n\t Error :  No file has been loaded! \n\n");
-		return;
+		return c;
 	}
 	
   gStyle->SetPalette(1);
   gStyle->SetOptStat(0);
       
-  TCanvas *c = new TCanvas("GammaAnalysis","Gamma Coincidence Analysis",0,0,1200,800);
+  c = new TCanvas("GammaAnalysis","Gamma Coincidence Analysis",0,0,1200,800);
   c->Divide(2,2);
   
   ////////////////////////////////////////////////////////////////////////////////////
@@ -350,13 +345,17 @@ void TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t bg0,
   
   ////////////////////////////////////////////////////////////////////////////////////  
   c->cd(4);
-  TH1D *hexcgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3,exc_lo,exc_hi); 
-  hexcgamgated->GetXaxis()->SetRangeUser(0,1500);  
-  hexcgamgated->DrawCopy();
-    
+	if(exc_lo>=0.0 && exc_hi>exc_lo){
+		TH1D *hexcgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3,exc_lo,exc_hi); 
+		hexcgamgated->GetXaxis()->SetRangeUser(0,1500);  
+		hexcgamgated->DrawCopy();
+	} else {
+		TH2F *hexcthcm = ExcThetaGated(emin,emax,bg0,bg1,bg2,bg3); 
+		hexcthcm->DrawCopy("colz");
+	}
   ////////////////////////////////////////////////////////////////////////////////////  
   
-	return;
+	return c;
 }
 
 void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){ 
@@ -457,7 +456,7 @@ TH1D *TTigressAnalysis::TH2Proj(TH2F *h, char ax, Double_t minval, Double_t maxv
 		return (TH1D*) h->ProjectionY(Form("%s_py_%iTo%i",h->GetName(),b[0],b[1]),b[0],b[1]);
 }
 
-TH2F *TTigressAnalysis::TH3Proj(TH3F *h, std::string str, Double_t minval, Double_t maxval, Double_t &sz){
+TH2F *TTigressAnalysis::TH3Proj(TH3S *h, std::string str, Double_t minval, Double_t maxval, Double_t &sz){
 
 	TAxis *axis;	
 	if(str.find('x')==std::string::npos)
@@ -469,7 +468,7 @@ TH2F *TTigressAnalysis::TH3Proj(TH3F *h, std::string str, Double_t minval, Doubl
 					
   int b[2] = {axis->FindBin(minval), axis->FindBin(maxval)};
 	double c[2] = {axis->GetBinCenter(b[0]), axis->GetBinCenter(b[1])};
-	printf("\n\tstr = %s .. vals[] = {%.1f, %.1f}  b[] = {%i, %i}, c[] = {%.1f, %.1f}",str.c_str(),minval,maxval,b[0],b[1],c[0],c[1]);
+//	printf("\n\tstr = %s .. vals[] = {%.1f, %.1f}  b[] = {%i, %i}, c[] = {%.1f, %.1f}",str.c_str(),minval,maxval,b[0],b[1],c[0],c[1]);
 
 	axis->SetRange(b[0],b[1]);
 	// actual gate width
