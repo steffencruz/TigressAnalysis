@@ -1,11 +1,15 @@
 
 OBJECTS = TTigressAnalysis.o TTigressAnalysisDict.o 
 
+GRSISYS=/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/GRSISort
+
+CFLAGS += -I$(GRSISYS)/include -L$(GRSISYS)/libraries -fPIC -I $(GRSISYS)/include/
 
 #COMP_STRING="Now Compling "
 DICT_STRING="Now Making Dict for ${OBJ_COLOR}$< ${NO_COLOR}"
 
 CAT=cat
+
 
 
 export CAT=cat
@@ -33,6 +37,8 @@ export FIN_OBJ_COLOR=\033[3;32m
 
 export PLATFORM:= $(PLATFORM)
 
+#export GRSISYS:= $(GRSISYS)
+
 #ifeq ($(PLATFORM),Darwin)
 export __APPLE__:= 1
 export CFLAGS += -DOS_DARWIN -std=c++11 -DHAVE_ZLIB #-lz
@@ -40,7 +46,12 @@ export CFLAGS += -m64 -I$(ROOTSYS)/include
 export LFLAGS = -dynamiclib -undefined dynamic_lookup -single_module # 
 export SHAREDSWITCH = -install_name # ENDING SPACE
 export CPP = xcrun clang++ 
-
+#else
+#export __LINUX__:= 1	
+#export CFLAGS += -stdlib=libc++ -m64 -I/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/root/include 
+#export SHAREDSWITCH = -shared -Wl,-soname,#NO ENDING SPACE
+#export CPP = g++
+#endif
 export COMPILESHARED   = $(CPP) $(LFLAGS) $(SHAREDSWITCH)#NO ENDING SPACE
 
 
