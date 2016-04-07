@@ -22,6 +22,8 @@ std::string TTigressAnalysis::histfile = "";
 std::string TTigressAnalysis::nndcfile = "";
 
 TH3F *TTigressAnalysis::hexcgamgam = NULL;
+TH3F *TTigressAnalysis::hexcthcmgam = NULL;
+
 TH2F *TTigressAnalysis::hgamgam = NULL;
 TH2F *TTigressAnalysis::hexcgam = NULL;
 TH1D *TTigressAnalysis::hgam = NULL;
@@ -92,14 +94,16 @@ void TTigressAnalysis::LoadHistos(const char *fname){
 	
 	if(f1->IsOpen()){
 		histfile.assign(fname);
-    hexcgamgam = (TH3F*)f1->Get("ExcGamGam_dp"); 
-		hexcgam 	 = (TH2F*)f1->Get("ExcGam_dp");       
-    hgamgam 	 = (TH2F*)f1->Get("GamGam_dp");
-    hgam			 = (TH1D*)f1->Get("Gam_dp");
-    hexc 			 = (TH1D*)f1->Get("Exc_dp");  
+    hexcgamgam  = (TH3F*)f1->Get("ExcGamGam_dp"); 
+    hexcthcmgam = (TH3F*)f1->Get("ExcGamThetaCmSmooth_dp"); // fixed!
+		hexcgam 	  = (TH2F*)f1->Get("ExcGam_dp");       
+    hgamgam 	  = (TH2F*)f1->Get("GamGam_dp");
+    hgam			  = (TH1D*)f1->Get("Gam_dp");
+    hexc 			  = (TH1D*)f1->Get("Exc_dp");  
     
     printf("\n\t Loaded Histograms :-\n");
     if(hexcgamgam) hexcgamgam->Print();  		
+    if(hexcthcmgam) hexcthcmgam->Print();  		    
     if(hexcgam) hexcgam->Print();  		
     if(hgamgam) hgamgam->Print();  		
     if(hgam) hgam->Print();  		
@@ -145,81 +149,33 @@ TH1D *TTigressAnalysis::GamGated(Double_t emin, Double_t emax, Double_t bg0, Dou
   	h2 = hgamgam;
   
   TH1D *hpx[4], *hpy[4], *hpt[4];    
-  TAxis *ax = h2->GetXaxis(), *ay = h2->GetYaxis();
-  // project peak onto x and y axis  
-  int xp[2] = {ax->FindBin(emin), ax->FindBin(emax)};
-  int yp[2] = {ay->FindBin(emin), ay->FindBin(emax)};
-  hpx[0] = (TH1D*)h2->ProjectionX("hpx0",yp[0],yp[1]);  
-  hpy[0] = (TH1D*)h2->ProjectionY("hpy0",xp[0],xp[1]);  
-  
-  // get axis ranges emax project background region onto x and y
-  Int_t xl[2] = {ax->FindBin(bg0), ax->FindBin(bg1)};
-  Int_t xh[2] = {ax->FindBin(bg2), ax->FindBin(bg3)};
-  Int_t yl[2] = {ay->FindBin(bg0), ay->FindBin(bg1)};  
-  Int_t yh[2] = {ay->FindBin(bg2), ay->FindBin(bg3)};
-  ////////////////////////////////////////////////////////////////////////////////////
-  
-  // actual bin centers
-  Double_t enpeak[2]= {ax->GetBinCenter(xp[0]),ax->GetBinCenter(xp[1])};
-  Double_t enleft[2]= {ax->GetBinCenter(xl[0]),ax->GetBinCenter(xl[1])};
-  Double_t enrigh[2]= {ax->GetBinCenter(xh[0]),ax->GetBinCenter(xh[1])};
-
-// determine widths of each region so that the background can be weighted appropriately
-  Double_t width[3];
-  width[0] = ax->GetBinCenter(xp[1])-ax->GetBinCenter(xp[0]);
-  width[1] = ax->GetBinCenter(xl[1])-ax->GetBinCenter(xl[0]);
-  width[2] = ax->GetBinCenter(xh[1])-ax->GetBinCenter(xh[0]);
-  
-  ////////////////////////////////////////////////////////////////////////////////////
-
-	// add x and y peak 1D projections together
-  hpt[0] = (TH1D*)hpx[0]->Clone("hpt0");
-  hpt[0]->Add(hpy[0],1); // total peak = x projection + y projection
-
-	// add x and y BG_LOW 1D projections together
-  hpx[1] = (TH1D*)h2->ProjectionX("hpx1",yl[0],yl[1]);
-  hpx[1]->Scale(0.5*width[0]/width[1]);
-  
-  hpy[1] = (TH1D*)h2->ProjectionY("hpy1",xl[0],xl[1]);
-  hpy[1]->Scale(0.5*width[0]/width[1]);
-	// total low background
-  hpt[1] = (TH1D*)hpx[1]->Clone("hpt1");
-  hpt[1]->Add(hpy[1],1); 
-  
-	// add x and y BG_HIGH 1D projections together  
-  hpx[2] = (TH1D*)h2->ProjectionX("hpx2",yh[0],yh[1]);
-  hpx[2]->Scale(0.5*width[0]/width[2]);
-  
-  hpy[2] = (TH1D*)h2->ProjectionY("hpy2",xh[0],xh[1]);
-  hpy[2]->Scale(0.5*width[0]/width[2]);
-	// total high background
-  hpt[2] = (TH1D*)hpx[2]->Clone("hpt1");
-  hpt[2]->Add(hpy[2],1);
-
-  
-	// subtract weighted backgrounds emin gated gamma gamma peak 
-  hpx[3] = (TH1D*)hpx[0]->Clone("hpx3");
-  hpx[3]->Add(hpx[1],-1);
-  hpx[3]->Add(hpx[2],-1);
-  
-  hpy[3] = (TH1D*)hpy[0]->Clone("hpy3");
-  hpy[3]->Add(hpy[1],-1);
-  hpy[3]->Add(hpy[2],-1);
-
-  hpt[3] = (TH1D*)hpt[0]->Clone("GammaGatedGammas");
-  hpt[3]->Add(hpt[1],-1); 
-  hpt[3]->Add(hpt[2],-1);
-  
-  ////////////////////////////////////////////////////////////////////////////////////
- 
-  for(int i=0;i<4;i++)
-  	hpt[i]->Scale(0.5);
-
-	hpt[3]->Rebin(gambinsz/hpt[3]->GetBinWidth(0));
-  hpt[3]->SetTitle(Form("Gammma Energy Coincident With Gated Gam %sEnergy; Gamma energy [keV]; Counts / %i keV",exc_hi>0?"And Exc ":"",gambinsz));
+	Double_t peakszx, peakszy, bgloszx, bgloszy, bghiszx, bghiszy;
+  // peak x & y & tot
+  hpx[0] = TH2Proj(h2,'x',emin,emax,peakszy); 
+  hpy[0] = TH2Proj(h2,'y',emin,emax,peakszx);  
+  hpt[0] = TH1Sum(hpx[0],hpy[0]);
+  // bglo x & y & tot
+  hpx[1] = TH2Proj(h2,'x',bg0,bg1,bgloszy);
+  hpy[1] = TH2Proj(h2,'y',bg0,bg1,bgloszx);  
+  hpt[1] = TH1Sum(hpx[1],hpy[1],peakszy/bgloszy,peakszx/bgloszx);
+  //hpt[1]->Scale(0.5);
+  // bghi x & y & tot  
+  hpx[2] = TH2Proj(h2,'x',bg2,bg3,bghiszy);
+  hpy[2] = TH2Proj(h2,'y',bg2,bg3,bghiszx);  
+  hpt[2] = TH1Sum(hpx[2],hpy[2],peakszy/bghiszy,peakszx/bghiszx);
+ // hpt[1]->Scale(0.5);
+    
+	// bgtot  
+  hpt[3] = TH1Sum(hpt[1],hpt[2]);
+  // peak - bgtot
+  TH1D *hg = TH1Sum(hpt[0],hpt[3],1,-0.5);
+  hg->Scale(0.5);
+	hg->Rebin(gambinsz/hg->GetBinWidth(0));
+  hg->SetNameTitle("GatedGammas",Form("Gammma Energy Coincident With Gated Gam %sEnergy; Gamma energy [keV]; Counts / %i keV",exc_hi>0?"And Exc ":"",gambinsz));
       
-	return hpt[3];
-}
+	return hg;
+}	
+
 
 TH1D *TTigressAnalysis::ExcGated(Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
 
@@ -230,31 +186,70 @@ TH1D *TTigressAnalysis::ExcGated(Double_t emin, Double_t emax, Double_t bg0, Dou
 
 	SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);
 
-	TH1D *hpye[4];
-	TAxis *ax = hexcgam->GetXaxis();
+	TH1D *hp[4];
+	TH2F *h2 = hexcgam;
+	Double_t peaksz, bglosz, bghisz;
+  // peak
+  hp[0] = TH2Proj(h2,'y',emin,emax,peaksz);	
+	// bglo  
+  hp[1] = TH2Proj(h2,'y',bg0,bg1,bglosz);		
+	// bghi  
+  hp[2] = TH2Proj(h2,'y',bg2,bg3,bghisz);	
+  // bgtot	
+  hp[3] = TH1Sum(hp[1],hp[2],peaksz/bglosz,peaksz/bghisz);
+  
+  // peak - bgtot
+  TH1D *he = TH1Sum(hp[0],hp[3],1,-0.5);
+       	
+	he->SetLineColor(1);
+	he->GetYaxis()->SetTitleOffset(1.3);
+	he->Rebin(excbinsz/he->GetBinWidth(0));
+  he->SetNameTitle("GatedProtons",Form("Excitation Energy Coincident With Gated Gamma Energy; Excitation Energy [keV]; Counts / %i keV",excbinsz));
 
-	// excitation energy doesn't need all these x and y projections as we only have one gamma axis
-	hpye[0] = (TH1D*)hexcgam->ProjectionY("hpye0",ax->FindBin(emin),ax->FindBin(emax));   
-
-	hpye[1] = (TH1D*)hexcgam->ProjectionY("hpye1",ax->FindBin(bg0),ax->FindBin(bg1));
-	hpye[1]->Scale(0.5*(emax-emin)/(bg1-bg0)); // 0.5 is because we take half background emin below and half emin above
-
-	hpye[2] = (TH1D*)hexcgam->ProjectionY("hpye2",ax->FindBin(bg2),ax->FindBin(bg3));
-	hpye[2]->Scale(0.5*(emax-emin)/(bg3-bg2));
-
-	hpye[3] = (TH1D*)hpye[0]->Clone("Gamma Gated Protons");
-	hpye[3]->Add(hpye[1],-1);
-	hpye[3]->Add(hpye[2],-1);  
-
-	hpye[3]->SetLineColor(1);
-	hpye[3]->GetYaxis()->SetTitleOffset(1.3);
-
-	hpye[3]->Rebin(excbinsz/hpye[3]->GetBinWidth(0));
-  hpye[3]->SetNameTitle("GammaGatedProtons",Form("Excitation Energy Coincident With Gated Gamma Energy; Excitation Energy [keV]; Counts / %i keV",excbinsz));
-
-	return hpye[3];
-
+	return he;
 }
+
+TH2F *TTigressAnalysis::ExcThetaGated(Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
+
+	if(!histfile.size()){
+		printf("\n\t Error :  No file has been loaded! \n\n");
+		return 0;
+	}
+	// so far it always uses dp in cm frame
+	SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);
+
+	TH2F *hp[4];
+	TH3F *h3 = hexcthcmgam;
+	// x = thcm
+	// y = gam
+	// z = exc
+
+	Double_t peaksz, bglosz, bghisz;
+  // peak
+  hp[0] = TH3Proj(h3,"zx",emin,emax,peaksz);	 
+	// bglo  
+  hp[1] = TH3Proj(h3,"zx",bg0,bg1,bglosz);		
+	// bghi  
+  hp[2] = TH3Proj(h3,"zx",bg2,bg3,bghisz);	
+  // bgtot	
+  hp[3] = TH2Sum(hp[1],hp[2],peaksz/bglosz,peaksz/bghisz);
+  
+  // peak - bgtot
+  TH2F *het = TH2Sum(hp[0],hp[3],1,-0.5);
+ 	/*
+  TCanvas *c = new TCanvas;
+  c->Divide(2,2);
+  c->cd(1); hp[0]->Draw("colz");
+  c->cd(2); hp[1]->Draw("colz");
+  c->cd(3); hp[2]->Draw("colz");
+  c->cd(4); het->Draw("colz");
+  */
+	het->RebinY(excbinsz/het->GetYaxis()->GetBinWidth(0));
+  het->SetNameTitle("ExcThetaCm",Form("Excitation Energy Versus Theta Cm; Theta Cm [Deg]; Excitation Energy [keV]"));
+
+	return het;
+}
+
 
 void TTigressAnalysis::SetBackgroundLims(Double_t emin, Double_t emax, Double_t &bg0, Double_t &bg1, Double_t &bg2, Double_t &bg3){
 	// default behaviour for setting background region
@@ -428,7 +423,64 @@ Double_t TTigressAnalysis::gaus_lbg_exc(Double_t *x, Double_t *par){
    return fitval;
 }
 
+TH1D *TTigressAnalysis::TH1Sum(TH1D *ha, TH1D *hb, Double_t sca, Double_t scb){
+	TH1D *h = (TH1D*) ha->Clone(Form("%s_%s",ha->GetName(),hb->GetName()));
+	h->Scale(sca);
+	h->Add(hb,scb);
+	return h;
+}
 
+TH2F *TTigressAnalysis::TH2Sum(TH2F *ha, TH2F *hb, Double_t sca, Double_t scb){
+	TH2F *h = (TH2F*) ha->Clone(Form("%s_%s",ha->GetName(),hb->GetName()));
+	h->Scale(sca);
+	h->Add(hb,scb);
+	return h;
+}
+
+TH1D *TTigressAnalysis::TH2Proj(TH2F *h, char ax, Double_t minval, Double_t maxval, Double_t &sz){
+
+	TAxis *axis;
+	if(ax=='x')
+		axis =	h->GetYaxis();
+	else
+		axis =	h->GetXaxis();
+	
+  int b[2] = {axis->FindBin(minval), axis->FindBin(maxval)};
+	double c[2] = {axis->GetBinCenter(b[0]), axis->GetBinCenter(b[1])};
+	printf("\n\t vals[] = {%.1f, %.1f}  b[] = {%i, %i}, c[] = {%.1f, %.1f}",minval,maxval,b[0],b[1],c[0],c[1]);
+	// actual gate width
+	sz = c[1] - c[0];
+	
+	if(ax=='x')
+		return (TH1D*) h->ProjectionX(Form("%s_px_%iTo%i",h->GetName(),b[0],b[1]),b[0],b[1]);
+	else 
+		return (TH1D*) h->ProjectionY(Form("%s_py_%iTo%i",h->GetName(),b[0],b[1]),b[0],b[1]);
+}
+
+TH2F *TTigressAnalysis::TH3Proj(TH3F *h, std::string str, Double_t minval, Double_t maxval, Double_t &sz){
+
+	TAxis *axis;	
+	if(str.find('x')==std::string::npos)
+		axis = h->GetXaxis();
+	else if(str.find('y')==std::string::npos)
+		axis = h->GetYaxis();
+	else if(str.find('z')==std::string::npos)
+		axis = h->GetZaxis();
+					
+  int b[2] = {axis->FindBin(minval), axis->FindBin(maxval)};
+	double c[2] = {axis->GetBinCenter(b[0]), axis->GetBinCenter(b[1])};
+	printf("\n\tstr = %s .. vals[] = {%.1f, %.1f}  b[] = {%i, %i}, c[] = {%.1f, %.1f}",str.c_str(),minval,maxval,b[0],b[1],c[0],c[1]);
+
+	axis->SetRange(b[0],b[1]);
+	// actual gate width
+	sz = c[1] - c[0];
+	
+	TH2F *h2 = (TH2F*) h->Project3D(str.c_str());
+	
+	TH2F *h2safe = (TH2F*)h2->Clone("SafeCopy");
+	h2safe->SetName(Form("%s_py_%iTo%i",h->GetName(),b[0],b[1]));
+	return h2safe;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // DEMO - FOR PETER

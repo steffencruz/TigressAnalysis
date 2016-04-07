@@ -44,6 +44,10 @@ class TTigressAnalysis 	{
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
 											
+		static TH2F *ExcThetaGated(Double_t emin, Double_t emax, 
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0);
+																						
 		static void AnalyzeGammas(Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
@@ -60,11 +64,17 @@ class TTigressAnalysis 	{
 
 
 	private: 
-	
+
+		static TH1D *TH1Sum(TH1D *ha, TH1D *hb, Double_t sca=1.0, Double_t scb=1.0);
+		static TH2F *TH2Sum(TH2F *ha, TH2F *hb, Double_t sca=1.0, Double_t scb=1.0);
+
+		static TH1D *TH2Proj(TH2F *h, char ax, Double_t minval, Double_t maxval, Double_t &sz);
+		static TH2F *TH3Proj(TH3F *h, std::string ax, Double_t minval, Double_t maxval, Double_t &sz);
+
 		static Double_t gaus_lbg_exc(Double_t *x, Double_t *par);
 
 		static std::string histfile;
-		static TH3F *hexcgamgam;
+		static TH3F *hexcgamgam,*hexcthcmgam;
 		static TH2F *hgamgam,*hexcgam;
 		static TH1D *hgam,*hexc;
 		
