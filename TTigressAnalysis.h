@@ -12,6 +12,7 @@
 #include<TCanvas.h>
 
 #include <string>
+#include <map>
 
 // Reads a root file which contains gamma-gamma-excitation energy matrices and carries out coincidence analyses
 // WARNING : THE TH3F
@@ -19,13 +20,18 @@
 // * gamma gamma 
 // * exc gamma 
 
+// gamma gamma coincidences are now done on theory spectra too.
+// there is no efficiency applied so far.
+// it should be as simple as scaling the final spectrum by TigEff->Eval(egam)
+
 class TTigressAnalysis 	{
 	
 	public:
 
-		TTigressAnalysis(const char *fname = "");
+		TTigressAnalysis(void);
 		~TTigressAnalysis();
 	
+		static void Init();
 		static void Print(Option_t * = "");			
 		static void Clear(Option_t * = "");		
 		static void LoadHistos(const char *fname);
@@ -35,7 +41,8 @@ class TTigressAnalysis 	{
 		static Int_t GetGamBinSz() { return gambinsz; }
 		static Int_t GetExcBinSz() { return excbinsz; }
 						
-		static TH1D *Gammas(Double_t emin=0.0, Double_t emax=4000.0);
+		static TH1D *Gam(Double_t exmin=-1.0, Double_t exmax=-1.0);
+											
 		static TH1D *GamGated(Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
@@ -88,38 +95,40 @@ class TTigressAnalysis 	{
 		//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//
 	public:
 		
-		static void InitGammasLevels(Int_t nmax=100, Bool_t verb=true);
+		static void InitLevelsGammas(Int_t nmax=100, Bool_t verb=true);
 
 		static void LoadLevelsGammas(std::string fname="Sr96_LevelsGammas.txt", Int_t nmax = 100);
 	
-	  static std::vector<int> PrintStates(Double_t emin=0.0, Double_t emax = 10000.0);
-	  static Int_t PrintCascades(Int_t from_state, Bool_t printeng=false);
+	  static std::vector<int> PrintStates(Double_t emin=0.0, Double_t emax=10000.0);
+	  static std::vector<int> PrintCascades(Int_t from_state, Double_t egam=0.0, Bool_t printeng=false);
 		static void ClearVars();		
 
+	  static TCanvas *DrawDecayMats(Int_t from_state, Bool_t engaxis = true);
 	  static void SetVerbose(bool verb) { verbose = verb;}
 
-	  static void FixIntensities(Double_t emin=0.0, Double_t emax=10000.0, Int_t level=1, Double_t strength=50.0);
+	  static void FixIntensities(Double_t exmin=0.0, Double_t exmax=10000.0, Double_t egam=0.0, Int_t level=1, Double_t strength=50.0);
 	  static void SetIntensity(Int_t state, Double_t strength);
 	  static void ReadIntensities(const char *fname = "SavedIntensities.txt");
 	  static void WriteIntensities(const char *fname = "SavedIntensities.txt");
 
-	  static TH1D *DrawGammas(Int_t from_state, Bool_t draw=false);
-	  static TH1D *DrawGammasExcRange(Double_t emin=0.0, Double_t emax = 10000.0);
-	  static TCanvas *DrawDecayMats(Int_t from_state, Bool_t engaxis = true);
-	  
+	  static TH1D *DrawGammas(Int_t from_state, Double_t egam=0.0);
+		static TH1D *DrawGammasGated(Double_t exmin=-1.0, Double_t exmax=-1.0, Double_t egam=-1.0);
 									
 	private:
 	
-		static Int_t GetIndex(Double_t val, bool add_element=false);
+		static Int_t GetStateIndex(Double_t val, bool add_element=false);
+		static std::vector<int> GetCascadeIndex(Int_t from_state, Double_t egam=0.0);
 	
-	  static void AddSeq(std::vector<int> states);
-	  static Int_t BuildDecayScheme(Int_t from_state);	  
+	  static Int_t BuildDecayScheme(Int_t from_state);	  	
+	  static void AddCascade(std::vector<int> states);
+		static Int_t MakeSequenceHist(Int_t from_state);
 	  static THStack *GetDecayScheme(Int_t from_state, Bool_t engaxis = true);
 
 	  static void ConvertToEnergyAxis(TH1D *h);
-	  static TH2F *ShrinkToFit(int from_state, TH2F *h); // resizes histograms so axis ranges are relevant
 	  static void DrawTransitions(Int_t from_state, Bool_t engaxis);	  
 	  static TH1D *MakeRealistic(TH1D *hgam);
+	  
+	  static void GetRid(const char *name); // removes object
 
 		static std::string nndcfile;
 		
@@ -128,11 +137,13 @@ class TTigressAnalysis 	{
 
 		static Int_t nlines; 
 		static Int_t nsequences;
+		static Int_t ncascades;
 		static Int_t nstates;		
 		static Double_t ExcSig;
 		static Double_t NSig;			
-		static std::vector<double> energy;
+		static std::vector<double> energies;
 		static std::vector<int> states;
+		static std::map<int,std::vector<int> > cascades;
 		
 		static TH2F *htrans, *hgams, *hseq;
 		static TH1D *hint;
