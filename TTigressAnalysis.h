@@ -114,7 +114,7 @@ class TTigressAnalysis 	{
 	  static TH1D *DrawGammas(Int_t from_state, Double_t egam=0.0);
 		static TH1D *DrawGammasGated(Double_t exmin=-1.0, Double_t exmax=-1.0, Double_t egam=-1.0);
 									
-	private:
+	public:
 	
 		static Int_t GetStateIndex(Double_t val, bool add_element=false);
 		static std::vector<int> GetCascadeIndex(Int_t from_state, Double_t egam=0.0);
