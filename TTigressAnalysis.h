@@ -51,7 +51,11 @@ class TTigressAnalysis 	{
 		static TH1D *ExcGated(Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
-											
+
+		static TH2F *ExcGamGated(Double_t emin, Double_t emax, 
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0);
+																																	
 		static TH2F *ExcThetaGated(Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
@@ -60,6 +64,13 @@ class TTigressAnalysis 	{
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
 											Double_t exmin=-1.0, Double_t exmax=-1.0);
+
+		static TH1D *GamAngCorr(Double_t emin, Double_t emax,
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0,		
+											Double_t exmin=-1.0, Double_t exmax=-1.0);
+											
+		static TH2F *GamAngCorrMat(Double_t exmin=-1.0, Double_t exmax=-1.0);													
 													
 		static void FitPeakExcludeRange(TH1 *hist, 
 											Double_t emin, Double_t emax, 
@@ -70,7 +81,10 @@ class TTigressAnalysis 	{
 										Double_t &bg0, Double_t &bg1, 
 										Double_t &bg2, Double_t &bg3);
 
-
+		static Double_t Efficiency(Double_t eng);
+		
+		static TF1 *CorrelationFunction(Double_t par0=1.0,Double_t par1=1.0,Double_t par2=1.0);
+		
 	private: 
 
 		static TH1D *TH1Sum(TH1D *ha, TH1D *hb, Double_t sca=1.0, Double_t scb=1.0);
@@ -82,7 +96,7 @@ class TTigressAnalysis 	{
 		static Double_t gaus_lbg_exc(Double_t *x, Double_t *par);
 
 		static std::string histfile;
-		static TH3S *hexcgamgam,*hexcthcmgam;
+		static TH3S *hexcgamgam,*hexcthcmgam,*hexcgamthtig;
 		static TH2F *hgamgam,*hexcgam;
 		static TH1D *hgam,*hexc;
 		
@@ -113,8 +127,9 @@ class TTigressAnalysis 	{
 
 	  static TH1D *DrawGammas(Int_t from_state, Double_t egam=0.0);
 		static TH1D *DrawGammasGated(Double_t exmin=-1.0, Double_t exmax=-1.0, Double_t egam=-1.0);
+	  static TH1D *MakeRealistic(TH1D *hgam, Bool_t abseff = false);
 									
-	public:
+	private:
 	
 		static Int_t GetStateIndex(Double_t val, bool add_element=false);
 		static std::vector<int> GetCascadeIndex(Int_t from_state, Double_t egam=0.0);
@@ -126,9 +141,8 @@ class TTigressAnalysis 	{
 
 	  static void ConvertToEnergyAxis(TH1D *h);
 	  static void DrawTransitions(Int_t from_state, Bool_t engaxis);	  
-	  static TH1D *MakeRealistic(TH1D *hgam);
 	  
-	  static void GetRid(const char *name); // removes object
+	  static void GetRid(const char *name, Bool_t delete_all = true); // removes object
 
 		static std::string nndcfile;
 		
