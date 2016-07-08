@@ -31,10 +31,10 @@ class TTigressAnalysis 	{
 		TTigressAnalysis(void);
 		~TTigressAnalysis();
 	
-		static void Init();
+		static Bool_t Init();
 		static void Print(Option_t * = "");			
 		static void Clear(Option_t * = "");		
-		static void LoadHistos(const char *fname);
+		static Bool_t LoadHistos(const char *fname, const char *reac="dp");
 		
 		static void SetGamBinSz(Int_t wid) { gambinsz = wid; }
 		static void SetExcBinSz(Int_t wid) { excbinsz = wid; }
@@ -48,15 +48,15 @@ class TTigressAnalysis 	{
 											Double_t bg2=0.0, Double_t bg3=0.0,
 											Double_t exmin=-1.0, Double_t exmax=-1.0);
 
-		static TH1D *ExcGated(Double_t emin, Double_t emax, 
+		static TH1D *ExcGated(Double_t emin=0.0, Double_t emax=0.0, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
 
-		static TH2F *ExcGamGated(Double_t emin, Double_t emax, 
+		static TH2F *ExcGamGated(Double_t emin=0.0, Double_t emax=0.0, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
 																																	
-		static TH2F *ExcThetaGated(Double_t emin, Double_t emax, 
+		static TH2F *ExcThetaGated(Double_t emin=0.0, Double_t emax=0.0, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
 																						
@@ -96,6 +96,7 @@ class TTigressAnalysis 	{
 		static Double_t gaus_lbg_exc(Double_t *x, Double_t *par);
 
 		static std::string histfile;
+		static std::string reaction;
 		static TH3S *hexcgamgam,*hexcthcmgam,*hexcgamthtig;
 		static TH2F *hgamgam,*hexcgam;
 		static TH1D *hgam,*hexc;
@@ -109,9 +110,9 @@ class TTigressAnalysis 	{
 		//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//
 	public:
 		
-		static void InitLevelsGammas(Int_t nmax=100, Bool_t verb=true);
+		static Bool_t InitLevelsGammas(Int_t nmax=100, Bool_t verb=true);
 
-		static void LoadLevelsGammas(std::string fname="Sr96_LevelsGammas.txt", Int_t nmax = 100);
+		static Bool_t LoadLevelsGammas(std::string fname="Sr96_LevelsGammas.txt", Int_t nmax = 100);
 	
 	  static std::vector<int> PrintStates(Double_t emin=0.0, Double_t emax=10000.0);
 	  static std::vector<int> PrintCascades(Int_t from_state, Double_t egam=0.0, Bool_t printeng=false);

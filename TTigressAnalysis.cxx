@@ -16,9 +16,14 @@
 #include <algorithm>    // std::count
 #include <vector>       
 
+#ifndef DIR
+#define DIR "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/TigressAnalysis"
+#endif
+
 ClassImp(TTigressAnalysis)
 
 std::string TTigressAnalysis::histfile = "";
+std::string TTigressAnalysis::reaction = "";
 std::string TTigressAnalysis::nndcfile = "";
 
 TH3S *TTigressAnalysis::hexcgamgam = NULL;
@@ -60,17 +65,19 @@ TF1 *TTigressAnalysis::TigEfficiency = NULL;
 
 
 
-
-
 TTigressAnalysis::TTigressAnalysis()	{	
 }
 
 TTigressAnalysis::~TTigressAnalysis()	{	}
 
-void TTigressAnalysis::Init(){
+Bool_t TTigressAnalysis::Init(){
 	
-	LoadHistos("$PROGDIR/TigressAnalysis/Results_ExcGamThetaMats_Redwood.root"); // read histograms	
-	InitLevelsGammas(100,false); // load nndc stuff
+  gStyle->SetPalette(1);
+  gStyle->SetOptStat(0);
+  gStyle->SetTitleOffset(1.5,"Y");
+      	
+	LoadHistos(Form("%s/Results_ExcGamThetaMats_Redwood.root",DIR),"dp"); // read histograms	
+	return InitLevelsGammas(100,false); // load nndc stuff
 }
 
 void TTigressAnalysis::Print(Option_t *opt) {
@@ -85,7 +92,11 @@ void TTigressAnalysis::Print(Option_t *opt) {
 void TTigressAnalysis::Clear(Option_t *opt) {
 
 	histfile.clear();
+	reaction.clear();
+
 	hexcgamgam = NULL;
+	hexcthcmgam = NULL;
+	hexcgamthtig = NULL;
 	hexcgam = NULL;
 	hgamgam = NULL;
 	hgam = NULL;		
@@ -96,38 +107,47 @@ void TTigressAnalysis::Clear(Option_t *opt) {
 	addback = true;
 }
 
-void TTigressAnalysis::LoadHistos(const char *fname){
+Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac){
 	
-	if(strcmp(fname,histfile.c_str())!=0){
+	if(strcmp(fname,histfile.c_str())!=0 || strcmp(reac,reaction.c_str())!=0){
 		
 		TFile *f1 = new TFile(fname,"READ");	
-		printf("\n Reading Histos File ' %s ' :\n",fname);				
+		printf("\n Reading Histos File ' %s ' and searching for ' %s ' :\n",fname,reac);				
 			
 		if(!f1->IsOpen()){
+			printf("\n\t Error :  Couldn't open file!\n");
 			histfile = "";
-			return;
+			return false;
 		}
 			
 		histfile.assign(fname);
-    hexcgamgam   = (TH3S*)f1->Get("ExcGamGam_dp"); 
-    hexcthcmgam  = (TH3S*)f1->Get("ExcGamThetaCm_dp");
-    hexcgamthtig = (TH3S*)f1->Get("ExcGamTigressTheta_dp");     
-		hexcgam 	   = (TH2F*)f1->Get("ExcGam_dp");       
-    hgamgam 	   = (TH2F*)f1->Get("GamGam_dp");    
-    hgam			   = (TH1D*)f1->Get("Gam_dp");
-    hexc 			   = (TH1D*)f1->Get("Exc_dp");  
+    hexcgamgam   = (TH3S*)f1->Get(Form("%s/ExcGamGam_%s",reac,reac)); 
+    hexcthcmgam  = (TH3S*)f1->Get(Form("%s/ExcGamThetaCm_%s",reac,reac));
+    hexcgamthtig = (TH3S*)f1->Get(Form("%s/ExcGamTigressTheta_%s",reac,reac));     
+		hexcgam 	   = (TH2F*)f1->Get(Form("%s/ExcGam_%s",reac,reac));       
+    hgamgam 	   = (TH2F*)f1->Get(Form("%s/GamGam_%s",reac,reac));    
+    hgam			   = (TH1D*)f1->Get(Form("%s/Gam_%s",reac,reac));
+    hexc 			   = (TH1D*)f1->Get(Form("%s/Exc_%s",reac,reac));  
+    
 
 		printf("\n Loaded Histograms :-\n");
-		if(hexcgamgam)   hexcgamgam->Print();  		
-		if(hexcthcmgam)  hexcthcmgam->Print();  		    
-		if(hexcgamthtig) hexcthcmgam->Print();  		    
-		if(hexcgam)      hexcgam->Print();  		
-		if(hgamgam)      hgamgam->Print();  		
-		if(hgam)         hgam->Print();  		
-		if(hexc)         hexc->Print();  		      
-	} else
-		printf("\n\t File ' %s ' Has Been Loaded !\n",fname);
+		if(hexcgamgam)   printf("\t->  (TH3S*) %s\n",hexcgamgam->GetName()); 
+		if(hexcthcmgam)  printf("\t->  (TH3S*) %s\n",hexcthcmgam->GetName());  
+		if(hexcgamthtig) printf("\t->  (TH3S*) %s\n",hexcgamthtig->GetName());   
+		if(hexcgam)      printf("\t->  (TH2F*) %s\n",hexcgam->GetName());   	
+		if(hgamgam)      printf("\t->  (TH2F*) %s\n",hgamgam->GetName()); 
+		if(hgam)         printf("\t->  (TH1D*) %s\n",hgam->GetName());   
+		if(hexc)         printf("\t->  (TH1D*) %s\n",hexc->GetName());  
 
+    if(!hexcgamgam||!hexcthcmgam||!hexcgamthtig||!hexcgam||!hgamgam||!hgam||!hexc)
+      return false;
+     
+    reaction.assign(reac);  
+      			  		      
+	} else
+
+	printf("\n\t File ' %s ' Has Been Loaded !\n",fname);
+	return true;
 }
 
 TH1D *TTigressAnalysis::Gam(Double_t exc_lo, Double_t exc_hi){
@@ -148,12 +168,12 @@ TH1D *TTigressAnalysis::Gam(Double_t exc_lo, Double_t exc_hi){
 		exc_hi = yax->GetBinCenter(yp[1]);
   	printf("\n Gam:  Excitation energy range : %.2f-%.2f keV [ bins %i - %i ]\n",exc_lo,exc_hi,yp[0],yp[1]);
 		
-  	h->SetTitle(Form("Gammas Gated on Excitation Energy Range %.1f - %.1f keV",exc_lo,exc_hi));
+  	h->SetTitle(Form("Gamma Singles Gated on Excitation Energy Range %.1f - %.1f keV",exc_lo,exc_hi));
   } else 
   	h = (TH1D*)hgam->Clone("Gammas");
 	
 	h->Rebin(gambinsz/h->GetBinWidth(0));	
-  h->SetTitle(Form("%s; Gamma Energy [keV]; Counts / %i keV",hgam->GetTitle(),gambinsz));	
+  h->SetTitle(Form("%s; Gamma Energy [keV]; Counts / %i keV",h->GetTitle(),gambinsz));	
 
 	return h;	
 }
@@ -203,7 +223,7 @@ TH1D *TTigressAnalysis::GamGated(Double_t emin, Double_t emax, Double_t bg0, Dou
   TH1D *hg = TH1Sum(hpt[0],hpt[3],1,-0.5);
   hg->Scale(0.5);
 	hg->Rebin(gambinsz/hg->GetBinWidth(0));
-  hg->SetNameTitle("GatedGammas",Form("Gammma Energy Coincident With Gated Gam %sEnergy; Gamma energy [keV]; Counts / %i keV",exc_hi>0?"And Exc ":"",gambinsz));
+  hg->SetNameTitle("GatedGammas",Form("Gammma Energy Coincident With Gated Gam %sEnergy; Gamma energy [keV]; Counts / %i keV",exc_hi>0?"& Exc ":"",gambinsz));
       
 	return hg;
 }	
@@ -215,27 +235,32 @@ TH1D *TTigressAnalysis::ExcGated(Double_t emin, Double_t emax, Double_t bg0, Dou
 		return 0;
 	}
 
-	SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);
+	TH1D *he;
+	if(!emin && !emax)
+		he = (TH1D*) hexc->Clone("Exc");
+	else{
+		SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);
 
-	TH1D *hp[4];
-	TH2F *h2 = hexcgam;
-	Double_t peaksz, bglosz, bghisz;
-  // peak
-  hp[0] = TH2Proj(h2,'y',emin,emax,peaksz);	
-	// bglo  
-  hp[1] = TH2Proj(h2,'y',bg0,bg1,bglosz);		
-	// bghi  
-  hp[2] = TH2Proj(h2,'y',bg2,bg3,bghisz);	
-  // bgtot	
-  hp[3] = TH1Sum(hp[1],hp[2],peaksz/bglosz,peaksz/bghisz);
-  
-  // peak - bgtot
-  TH1D *he = TH1Sum(hp[0],hp[3],1,-0.5);
-       	
+		TH1D *hp[4];
+		TH2F *h2 = hexcgam;
+		Double_t peaksz, bglosz, bghisz;
+		// peak
+		hp[0] = TH2Proj(h2,'y',emin,emax,peaksz);	
+		// bglo  
+		hp[1] = TH2Proj(h2,'y',bg0,bg1,bglosz);		
+		// bghi  
+		hp[2] = TH2Proj(h2,'y',bg2,bg3,bghisz);	
+		// bgtot	
+		hp[3] = TH1Sum(hp[1],hp[2],peaksz/bglosz,peaksz/bghisz);
+	
+		// peak - bgtot
+		he = TH1Sum(hp[0],hp[3],1,-0.5);
+  }    
+   	
 	he->SetLineColor(1);
 	he->GetYaxis()->SetTitleOffset(1.3);
 	he->Rebin(excbinsz/he->GetBinWidth(0));
-  he->SetNameTitle("GatedProtons",Form("Excitation Energy Coincident With Gated Gamma Energy; Excitation Energy [keV]; Counts / %i keV",excbinsz));
+  he->SetNameTitle("ExcEnergy",Form("Excitation Energy Coincident With Gated Gamma Energy; Excitation Energy [keV]; Counts / %i keV",excbinsz));
 
 	return he;
 }
@@ -274,6 +299,7 @@ TH2F *TTigressAnalysis::ExcThetaGated(Double_t emin, Double_t emax, Double_t bg0
  	}
  	
 	het->RebinY(excbinsz/het->GetYaxis()->GetBinWidth(0));
+	het->SetMinimum(0);  
   het->SetNameTitle("ExcThetaCm",Form("Excitation Energy Versus Theta Cm; Theta Cm [Deg]; Excitation Energy [keV]"));
 
 	return het;
@@ -297,11 +323,11 @@ TH2F *TTigressAnalysis::ExcGamGated(Double_t emin, Double_t emax, Double_t bg0, 
 		
 		Double_t peaksz, bglosz, bghisz;
 		// peak
-		hp[0] = TH3Proj(h3,"xz",emin,emax,peaksz);	 
+		hp[0] = TH3Proj(h3,"zy",emin,emax,peaksz);	 
 		// bglo  
-		hp[1] = TH3Proj(h3,"xz",bg0,bg1,bglosz);		
+		hp[1] = TH3Proj(h3,"zy",bg0,bg1,bglosz);		
 		// bghi  
-		hp[2] = TH3Proj(h3,"xz",bg2,bg3,bghisz);	
+		hp[2] = TH3Proj(h3,"zy",bg2,bg3,bghisz);	
 		// bgtot	
 		hp[3] = TH2Sum(hp[1],hp[2],peaksz/bglosz,peaksz/bghisz);
 	
@@ -312,6 +338,7 @@ TH2F *TTigressAnalysis::ExcGamGated(Double_t emin, Double_t emax, Double_t bg0, 
  	
 	heg->RebinX(gambinsz/heg->GetXaxis()->GetBinWidth(0)); 	
 	heg->RebinY(excbinsz/heg->GetYaxis()->GetBinWidth(0));
+	heg->SetMinimum(0);
   heg->SetNameTitle("ExcGam",Form("Excitation Energy Versus Gamma Energy; Gamma Energy [keV]; Excitation Energy [keV]"));
 
 	return heg;	
@@ -320,6 +347,8 @@ TH2F *TTigressAnalysis::ExcGamGated(Double_t emin, Double_t emax, Double_t bg0, 
 void TTigressAnalysis::SetBackgroundLims(Double_t emin, Double_t emax, Double_t &bg0, Double_t &bg1, Double_t &bg2, Double_t &bg3){
 	// default behaviour for setting background region
 	
+	if(!emin && !emax)
+		return;	
 	if(bg0 && bg1 && bg2 && bg3){
 		return; // all background regions have been set
 	}else if(bg0 && bg1 && !bg2 && !bg3){ // only use lower background
@@ -352,9 +381,6 @@ TCanvas *TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t 
 	
 	SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);	
 	
-  gStyle->SetPalette(1);
-  gStyle->SetOptStat(0);
-      
   c = new TCanvas("GammaAnalysis","Gamma Coincidence Analysis",0,0,1200,800);
   c->Divide(2,2);
   
@@ -363,7 +389,7 @@ TCanvas *TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t 
   c->cd(1);
   // DRAW GAMMA SINGLES (FITTED, AND IN EXC RANGE) ON PAD1  
   TH1D *hgamx = Gam(exc_lo,exc_hi);
-  hgamx->SetTitle("Gamma Singles");  
+//  hgamx->SetTitle("Gamma Singles");  
   hgamx->GetXaxis()->SetRangeUser(bg0-20,bg3+80);
   
   hgamx->GetYaxis()->SetTitle(Form("Counts / %.0f keV",hgamx->GetBinWidth(0)));
@@ -514,7 +540,6 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
 	return h2;		
 }
 
-
 void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){ 
 
 	Double_t gBgConstant, gBgSlope, gContent, gMean, gSigma, gBinW, gChi2pNDF;
@@ -552,7 +577,6 @@ void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t em
 	gChi2pNDF   = fitfunc->GetChisquare() / fitfunc->GetNDF();
 
 }
-
 
 TF1 *TTigressAnalysis::CorrelationFunction(Double_t par0, Double_t par1, Double_t par2){
 	
@@ -675,13 +699,13 @@ TH2F *TTigressAnalysis::TH3Proj(TH3S *h, std::string str, Double_t minval, Doubl
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void TTigressAnalysis::InitLevelsGammas(Int_t nmax, Bool_t verb){
+Bool_t TTigressAnalysis::InitLevelsGammas(Int_t nmax, Bool_t verb){
 	gStyle->SetOptStat(0);
 	gStyle->SetTitleXOffset(1.3);
 	gStyle->SetTitleYOffset(1.5);	
 	
 	SetVerbose(verb);
-	LoadLevelsGammas("Sr96_LevelsGammas.txt",nmax);
+	Bool_t success = LoadLevelsGammas(Form("%s/Sr96_LevelsGammas.txt",DIR),nmax);
 	
 	// with appropriate peak widths we can identify multiple adjacent peaks	
 	TigSigma = new TF1("func_sig","[0]+[1]*TMath::Power(x,[2])",0,4000); // power law?
@@ -696,16 +720,17 @@ void TTigressAnalysis::InitLevelsGammas(Int_t nmax, Bool_t verb){
 	TigEfficiency->SetNpx(4000);
 	TigEfficiency->SetTitle("TIGRESS Efficiency Curve; Energy [keV]; Relative Efficiency"); 
 
+	return success;
 }
 
-void TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
+Bool_t TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 
 	ClearVars();
 	
 	std::ifstream infile(fname.c_str());	
 	if(!infile.is_open()){
 		printf("\nFAILED TO OPEN FILE :  %s\n\n",fname.c_str());
-		return;
+		return false;
 	}
 	
 	nndcfile.assign(fname);
@@ -724,7 +749,7 @@ void TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 	nstates = 0;
 	ncascades = 0;
 	
-	printf("\n Reading Input File %s:-\n",fname.c_str());
+	printf("\n Reading Input File ' %s ' :\n",fname.c_str());
 	if(verbose) printf("\n\t   State Energy\tGamma Energy\tIntensity[%%]\tFinal State [num]");
 	while(infile.good()){
 		
@@ -781,7 +806,7 @@ void TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 	for(int i=1; i<=nstates; i++)
 		BuildDecayScheme(i);
 				
-	return;
+	return true;
 }
 
 std::vector<int> TTigressAnalysis::PrintStates(Double_t emin, Double_t emax){
