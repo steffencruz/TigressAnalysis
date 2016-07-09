@@ -1016,7 +1016,12 @@ void TTigressAnalysis::FixIntensities(Double_t emin, Double_t emax, Double_t ega
 
 }
 
-void TTigressAnalysis::SetIntensity(Int_t state, Double_t strength){
+Bool_t TTigressAnalysis::SetIntensity(Int_t state, Double_t strength){
+
+  if(!energies.size()){
+    printf("\n\t! Error : No states have been loaded yet. Intensities cannot be set now.\n\n"); 
+    return false;
+  }
 
 	if(!hint){	
 		hint = new TH1D("StateIntensites","",nstates,0,nstates);
@@ -1029,18 +1034,21 @@ void TTigressAnalysis::SetIntensity(Int_t state, Double_t strength){
 	}
 	
 	hint->SetBinContent(state,strength);
-	return;
+	return true;
 }	
 
-void TTigressAnalysis::ReadIntensities(const char *fname){
+Bool_t TTigressAnalysis::ReadIntensities(const char *fname){
 
 	std::ifstream infile(fname);
 	if(!infile.is_open()){
 		printf("\n\t! Error : Could not locate file ' %s '\n\n",fname);
-		return;	
+		return false;	
 	}
 	
-	SetIntensity(0,0);// initiate the histogram
+	Bool_t success = SetIntensity(0,0);// initiate the histogram
+	if(!success)
+	  return false;
+	  
 	Int_t bin;
 	Double_t eng, val;
 	while(infile.good()){
@@ -1048,6 +1056,7 @@ void TTigressAnalysis::ReadIntensities(const char *fname){
 		hint->SetBinContent(bin,val);
 	}
 	printf("\n\n\tRead in file ' %s ' and set TH1D*'hint' intensities.\n\n",fname);
+	return true;
 }
 
 void TTigressAnalysis::WriteIntensities(const char *fname){
@@ -1262,6 +1271,71 @@ TH1D *TTigressAnalysis::DrawGammasGated(Double_t emin, Double_t emax, Double_t e
 	
 	return h;
 }
+
+
+TH2F *TTigressAnalysis::DrawExcGam(Double_t egam, Bool_t use_int){
+
+	const char *name = Form("ExcGam%s%s",egam>0?Form("_Gam%.1f",egam):"",use_int?"_UsingSetIntensities":"");
+	TH2F *h = (TH2F*)list->FindObject(name);
+	if(h){
+		printf("\n %s already exists. Using this histogram.\n",h->GetName());
+		return h;		
+	}
+
+	printf("\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");	
+	printf("\n\nDrawing excitation energy verus gamma energy :-");	
+	
+	Double_t emax = energies.back()+500.0;	
+	states = PrintStates(0.0,emax);
+	if(!states.size()){
+		printf("\n\t! Error : No states in this range\n\n");
+		return 0;
+	}
+
+	h = new TH2F(name,"",2000,0,4000.0,emax/40.0,0.0,emax);
+	h->SetTitle(Form("Excitation Versus Gamma %s; Gamma Energy [keV]; Excitation Energy [keV];",
+	                egam>0?Form("With %.1f keV Gam Gate",egam):""));		
+
+	TAxis *yax = h->GetYaxis();
+	Double_t binexwid = yax->GetBinWidth(0), exeng, energy, scale=1.0, val=1.0;	
+	Int_t binexlo, binexhi;
+	TF1 *func = new TF1("gaus","gaus",0,8000.0);
+	func->SetParameters(1.0/(sqrt(2*3.1415926)*ExcSig),0.0,ExcSig);		
+		
+	TH1D *hgam;
+	TH2F *hexcgam;
+	printf("\n\t Progress...\r");
+	for(int i=0; i<(Int_t)states.size(); i++){
+    printf("\t Progress... %4.2f %%\r",(Double_t)i/(Double_t)states.size()*100.0);     
+	  fflush(stdout);
+		hgam = DrawGammas(states.at(i),egam);
+		if(!hgam)
+			continue;
+    energy = energies.at(states.at(i)-1);
+    hgam = MakeRealistic(hgam); // include realistic gamma peak width
+
+    if(use_int && hint)
+      scale = hint->GetBinContent(states.at(i));
+
+		// take each state to be a normalized gaussian 
+		func->SetParameter(1,energy);	     
+    binexlo = yax->FindBin(energy-2.5*ExcSig);  
+    binexhi = yax->FindBin(energy+2.5*ExcSig);
+    for(int k=binexlo; k<=binexhi; k++){
+      exeng = yax->GetBinCenter(k);
+      for(int j=hgam->FindFirstBinAbove(); j<=hgam->FindLastBinAbove(); j++){
+        val = hgam->GetBinContent(j)*func->Eval(exeng)*binexwid;
+        if(val)
+          h->Fill(hgam->GetBinCenter(j),exeng,val*scale);
+      }
+    }
+	}
+  printf("\t Progress... 100.00%%     COMPLETE\n\n");
+	list->Add(h);	
+
+	return h;
+}
+
 
 TCanvas *TTigressAnalysis::DrawDecayMats(Int_t from_state, Bool_t engaxis){
 	

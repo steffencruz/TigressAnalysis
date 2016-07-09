@@ -122,14 +122,16 @@ class TTigressAnalysis 	{
 	  static void SetVerbose(bool verb) { verbose = verb;}
 
 	  static void FixIntensities(Double_t exmin=0.0, Double_t exmax=10000.0, Double_t egam=0.0, Int_t level=1, Double_t strength=50.0);
-	  static void SetIntensity(Int_t state, Double_t strength);
-	  static void ReadIntensities(const char *fname = "SavedIntensities.txt");
+	  static Bool_t SetIntensity(Int_t state, Double_t strength);
+	  static Bool_t ReadIntensities(const char *fname = "SavedIntensities.txt");
 	  static void WriteIntensities(const char *fname = "SavedIntensities.txt");
 
 	  static TH1D *DrawGammas(Int_t from_state, Double_t egam=0.0);
 		static TH1D *DrawGammasGated(Double_t exmin=-1.0, Double_t exmax=-1.0, Double_t egam=-1.0);
+    static TH2F *DrawExcGam(Double_t egam=-1.0, Bool_t use_int=false);	
 	  static TH1D *MakeRealistic(TH1D *hgam, Bool_t abseff = false);
-									
+				
+		static TH1D *DrawIntensitites(){ return hint; }							
 	private:
 	
 		static Int_t GetStateIndex(Double_t val, bool add_element=false);
