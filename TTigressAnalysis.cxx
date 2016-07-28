@@ -442,21 +442,21 @@ TCanvas *TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t 
 
   ////////////////////////////////////////////////////////////////////////////////////
   c->cd(2);
-  TH1D *hgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3); 
-  hgamgated->GetXaxis()->SetRangeUser(0,1500);
-  hgamgated->DrawCopy();  
-  
-  ////////////////////////////////////////////////////////////////////////////////////  
-  c->cd(4);
 	if(exc_lo>=0.0 && exc_hi>exc_lo){
 		TH1D *hexcgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3,exc_lo,exc_hi); 
 		hexcgamgated->GetXaxis()->SetRangeUser(0,1500);  
 		hexcgamgated->DrawCopy();
 	} else {
-		TH2F *hexcthcm = ExcThetaGated(emin,emax,bg0,bg1,bg2,bg3); 
-		hexcthcm->DrawCopy("colz");
-//		hexcthcm->SetMinimum(0);
-	}
+    TH1D *hgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3); 
+    hgamgated->GetXaxis()->SetRangeUser(0,1500);
+    hgamgated->DrawCopy(); 
+	}  
+  
+  ////////////////////////////////////////////////////////////////////////////////////  
+  c->cd(4);
+  TH2F *hexcthcm = ExcThetaGated(emin,emax,bg0,bg1,bg2,bg3); 
+  hexcthcm->DrawCopy("colz");
+
   ////////////////////////////////////////////////////////////////////////////////////  
   printf("\n\tMade Analysis Plots!\n\n");
 	return c;
@@ -593,10 +593,16 @@ Double_t TTigressAnalysis::Efficiency(Double_t eng){
 		return 0.0;
 	}
 	
-	Double_t eff815 = 0.05; // approximate absolute TIGRESS efficiency at 815 keV
+	//Double_t eff815 = 0.05; // approximate absolute TIGRESS efficiency at 815 keV
+	Double_t eff815 = 0.078; // absolute TIGRESS efficiency using a bunch of gamma gates on this data (see excel doc)
 	Double_t rel2abs = eff815/TigEfficiency->Eval(815.0);
 	
 	return TigEfficiency->Eval(eng)*rel2abs; 
+}
+
+Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
+  Double_t relerr = 0.0906;
+  return Efficiency(eng)*relerr;
 }
 
 Double_t TTigressAnalysis::gaus_lbg_exc(Double_t *x, Double_t *par){
@@ -867,6 +873,29 @@ std::vector<int>  TTigressAnalysis::PrintCascades(Int_t from_state, Double_t ega
 	printf("\n\n");
 	return indx;
 }
+
+Double_t TTigressAnalysis::BranchingRatio(Double_t state_eng, Double_t egam){
+
+	Int_t from_state = GetStateIndex(state_eng,false);
+	if(!BuildDecayScheme(from_state+1))
+		return 0;
+	
+	Double_t eng1 = energies.at(from_state);	
+	Int_t to_state = GetStateIndex(eng1-egam,false);
+	if(to_state<0){
+	  printf("\n\t Error :  The transition %.1f keV -> %.1f keV was not found in file.\n\n",state_eng,state_eng-egam);
+	  return 0;
+  }
+	Double_t eng2 = energies.at(to_state);
+	
+	Double_t val = htrans->GetBinContent(from_state+1,to_state+1);
+	Double_t tot = htrans->ProjectionX()->GetBinContent(from_state+1);
+	
+	if(verbose)printf("\n\t Transition from %.1f keV state to %.1f keV state has intensity = %.2e",eng1,eng2,val/tot);
+	if(verbose)printf("\n\t Branching fraction = %.2e\n\n",tot/val);
+	return val/tot;
+}		
+
 
 void TTigressAnalysis::ClearVars(){
 	
@@ -1272,7 +1301,6 @@ TH1D *TTigressAnalysis::DrawGammasGated(Double_t emin, Double_t emax, Double_t e
 	return h;
 }
 
-
 TH2F *TTigressAnalysis::DrawExcGam(Double_t egam, Bool_t use_int){
 
 	const char *name = Form("ExcGam%s%s",egam>0?Form("_Gam%.1f",egam):"",use_int?"_UsingSetIntensities":"");
@@ -1335,7 +1363,6 @@ TH2F *TTigressAnalysis::DrawExcGam(Double_t egam, Bool_t use_int){
 
 	return h;
 }
-
 
 TCanvas *TTigressAnalysis::DrawDecayMats(Int_t from_state, Bool_t engaxis){
 	

@@ -82,6 +82,7 @@ class TTigressAnalysis 	{
 										Double_t &bg2, Double_t &bg3);
 
 		static Double_t Efficiency(Double_t eng);
+		static Double_t EfficiencyError(Double_t eng);		
 		
 		static TF1 *CorrelationFunction(Double_t par0=1.0,Double_t par1=1.0,Double_t par2=1.0);
 		
@@ -131,7 +132,8 @@ class TTigressAnalysis 	{
     static TH2F *DrawExcGam(Double_t egam=-1.0, Bool_t use_int=false);	
 	  static TH1D *MakeRealistic(TH1D *hgam, Bool_t abseff = false);
 				
-		static TH1D *DrawIntensitites(){ return hint; }							
+		static TH1D *DrawIntensitites(){ return hint; }				
+		static Double_t BranchingRatio(Double_t from_state, Double_t egam);			
 	private:
 	
 		static Int_t GetStateIndex(Double_t val, bool add_element=false);
