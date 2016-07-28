@@ -892,7 +892,6 @@ Double_t TTigressAnalysis::BranchingRatio(Double_t state_eng, Double_t egam){
 	Double_t tot = htrans->ProjectionX()->GetBinContent(from_state+1);
 	
 	if(verbose)printf("\n\t Transition from %.1f keV state to %.1f keV state has intensity = %.2e",eng1,eng2,val/tot);
-	if(verbose)printf("\n\t Branching fraction = %.2e\n\n",tot/val);
 	return val/tot;
 }		
 
