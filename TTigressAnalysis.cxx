@@ -76,6 +76,8 @@ Bool_t TTigressAnalysis::Init(){
 // gStyle->SetPalette(1);
 //  gStyle->SetOptStat(0);
 //  gStyle->SetTitleOffset(1.5,"Y");
+
+  SetEfficiencyCurve("AddbackEfficiencyData.txt",815,7.33,0.04);
       	
 	LoadHistos(Form("%s/Results_ExcGamThetaMats_Redwood.root",DIR),"dp"); // read histograms	
 	return InitLevelsGammas(100,false); // load nndc stuff
@@ -595,6 +597,103 @@ TF1 *TTigressAnalysis::CorrelationFunction(Double_t par0, Double_t par1, Double_
 	return func;
 }
 
+
+TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engabs, Double_t abseff, Double_t abserr){
+
+  const char *absmsg, *addmsg;
+  if(engabs>0 && abseff>0 && abserr>=0){
+    absmsg = "Absolute ";
+    addmsg = "Addback ";
+  } else {
+    absmsg = " ";
+    addmsg = " ";    
+  }
+    
+  gTigEff = new TGraphErrors();    
+  gTigEff->SetNameTitle("EffData",Form("TIGRESS %s%sEfficiency Curve; Energy [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
+
+  std::ifstream infile(efname);
+  Double_t eng, eff, err;
+  while(infile.good()){
+    infile >> eng >> eff >> err;
+
+    gTigEff->SetPoint(gTigEff->GetN(),eng,eff);
+    gTigEff->SetPointError(gTigEff->GetN()-1,0,err);
+  }
+  infile.close();
+
+	// Relative Efficiency		
+	fTigEff = new TF1("func_eff","[0]*pow(10.,[1]*log10(x)+[2]*pow(log10(x),2.)+[3]*pow(1/x,2.))",0,4000);
+	fTigEff->SetNpx(2000);
+//	fTigEff->SetLineWidth(1);
+	fTigEff->SetParameters(35,-0.14,0.052,-2308);	
+//	fTigEff->SetParameter(0,fTigEff->GetParameter(0)/fTigEff->GetMaximum());
+  fTigEff->SetNameTitle("EffFit",Form("TIGRESS %s%sEfficiency Curve; Energy [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
+  
+   // fit data
+  gTigEff->Fit(fTigEff,"QEM");  
+  Double_t *xx = gTigEff->GetX(), *yy = gTigEff->GetY(), *ye = gTigEff->GetEY();
+  
+  Double_t chi2=0;
+  for(int i=0; i<gTigEff->GetN();i++)
+    chi2 += pow(yy[i]-fTigEff->Eval(xx[i]),2.0)/ye[i];
+   if(verbose) printf("\n\n\n \tChi2 = %f, Chi2/NDF = %f\n\n",chi2,chi2/(gTigEff->GetN()-1));   
+  
+  TCanvas *canvas = new TCanvas("EfficiencyCurve","EfficiencyCurve",800,500); 
+  canvas->SetGrid();
+  gTigEff->Draw("APQ");  
+  
+  // calculate fit error using only absolute scaling... approx, but still helpful
+  TF1 *flo = (TF1*)fTigEff->Clone("flower_abs"); 
+  flo->SetLineWidth(1);flo->SetLineStyle(2); flo->SetLineColor(3);
+  TF1 *fup = (TF1*)fTigEff->Clone("fupper_abs");
+  fup->SetLineWidth(1);fup->SetLineStyle(2); fup->SetLineColor(3); 
+
+  // use absolute scaling factor uncertainty to make confidence band
+  Double_t conf = fTigEff->GetParError(0);
+  flo->SetParameter(0,fTigEff->GetParameter(0)-conf);
+  fup->SetParameter(0,fTigEff->GetParameter(0)+conf);  
+//  printf("\n\tval = %f +/- %f\n\n",fTigEff->GetParameter(0),conf);
+  
+  if(engabs<=0 || abseff<=0 || abserr<0)
+    return canvas;
+    
+  // get the scaling factor for the fit to reproduce the required point
+  Double_t abscale = abseff/fTigEff->Eval(engabs), y;
+  
+  // now apply absolute scaling
+  for(int i=0; i<gTigEff->GetN(); i++){  
+    y = yy[i]*abscale;
+    gTigEff->SetPointError(i,0.0,(ye[i]/yy[i]+abserr/abseff)*y); 
+    gTigEff->SetPoint(i,xx[i],y);    
+  }
+  
+  // refit data
+  fTigEff->SetParameter(0,fTigEff->GetParameter(0)*abscale);
+  gTigEff->Fit(fTigEff,"QEM");
+  
+  // make confidence band larger due to uncertainty on absolute scaling
+ // conf = fTigEff->GetParameter(0)*abserr/abseff;
+  conf = fTigEff->GetParError(0);
+
+  flo = (TF1*)fTigEff->Clone("flower_abs");  
+  flo->SetLineWidth(1);flo->SetLineStyle(3);
+  flo->SetParameter(0,fTigEff->GetParameter(0)-conf);
+ // flo->SetParameter(1,fTigEff->GetParameter(1)-fTigEff->GetParError(1));
+  
+  fup = (TF1*)fTigEff->Clone("fupper_abs");
+  fup->SetLineWidth(1);fup->SetLineStyle(3); 
+  fup->SetParameter(0,fTigEff->GetParameter(0)+conf);   
+ // fup->SetParameter(1,fTigEff->GetParameter(1)+fTigEff->GetParError(1));
+
+  //fTigEff->Draw("e3");
+  gTigEff->Draw("AP");
+  flo->Draw("same");
+  fup->Draw("same");
+  
+  return canvas;
+}
+
 Double_t TTigressAnalysis::Efficiency(Double_t eng){
 
 	if(!fTigEff){
@@ -602,16 +701,22 @@ Double_t TTigressAnalysis::Efficiency(Double_t eng){
 		return 0.0;
 	}
 	
-	//Double_t eff815 = 0.05; // approximate absolute TIGRESS efficiency at 815 keV
-	Double_t eff815 = 0.078; // absolute TIGRESS efficiency using a bunch of gamma gates on this data (see excel doc)
-	Double_t rel2abs = eff815/fTigEff->Eval(815.0);
+	return fTigEff->Eval(eng);//*rel2abs; 
 	
-	return fTigEff->Eval(eng)*rel2abs; 
+	//Double_t eff815 = 0.05; // approximate absolute TIGRESS efficiency at 815 keV
+	//Double_t eff815 = 0.078; // absolute TIGRESS efficiency using a bunch of gamma gates on this data (see excel doc)
+	//Double_t rel2abs = eff815/fTigEff->Eval(815.0);	
 }
 
 Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
-  Double_t relerr = 0.0906;
-  return Efficiency(eng)*relerr;
+  
+    Double_t eff = Efficiency(eng);
+    if(eff==0)
+      return 0.0;
+     
+    return eff*fTigEff->GetParError(0)/fTigEff->GetParameter(0);  
+//  Double_t relerr = 0.0906;
+//  return Efficiency(eng)*relerr;
 }
 
 Double_t TTigressAnalysis::gaus_lbg_exc(Double_t *x, Double_t *par){
@@ -728,87 +833,10 @@ Bool_t TTigressAnalysis::InitLevelsGammas(Int_t nmax, Bool_t verb){
 	fTigSigma->SetNpx(4000);
 	fTigSigma->SetTitle("TIGRESS Resolution Curve; Energy [keV]; Peak Sigma [keV]");
 
+  SetEfficiencyCurve("AddbackEfficiencyData.txt",815,7.33,0.04);
+  
 	return success;
 }
-
-TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engabs, Double_t abseff, Double_t abserr){
-
-  const char *absmsg, *addmsg;
-  if(engabs>0 && abseff>0 && abserr>0){
-    absmsg = "Absolute ";
-    addmsg = "Addback ";
-  } else {
-    absmsg = " ";
-    addmsg = " ";    
-  }
-    
-  gTigEff = new TGraphErrors();    
-  gTigEff->SetNameTitle("EffData",Form("TIGRESS %s%sEfficiency Curve; Energy [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
-
-  std::ifstream infile(efname);
-  Double_t eng, eff, err;
-  while(infile.good()){
-    infile >> eng >> eff >> err;
-
-    gTigEff->SetPoint(gTigEff->GetN(),eng,eff);
-    gTigEff->SetPointError(gTigEff->GetN()-1,0,err);
-  }
-  infile.close();
-
-	// Relative Efficiency		
-	fTigEff = new TF1("func_eff","[0]*pow(10.,[1]*log10(x)+[2]*pow(log10(x),2.)+[3]*pow(1/x,2.))",0,4000);
-	fTigEff->SetNpx(4000);
-	fTigEff->SetParameters(35,-0.14,0.052,-2308);	
-//	fTigEff->SetParameter(0,fTigEff->GetParameter(0)/fTigEff->GetMaximum());
-  fTigEff->SetNameTitle("EffFit",Form("TIGRESS %s%sEfficiency Curve; Energy [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
-  
-   // fit data
-  gTigEff->Fit(fTigEff,"M");  
-  Double_t *xx = gTigEff->GetX(), *yy = gTigEff->GetY(), *ye = gTigEff->GetEY();
-  
-  Double_t chi2=0;
-  for(int i=0; i<gTigEff->GetN();i++)
-    chi2 += pow(yy[i]-fTigEff->Eval(xx[i]),2.0)/ye[i];
-   printf("\n\n\n \tChi2 = %f, Chi2/NDF = %f\n\n",chi2,chi2/(gTigEff->GetN()-1));   
-  
-  TCanvas *canvas = new TCanvas("EfficiencyCurve","EfficiencyCurve",800,500); 
-  canvas->SetGrid();
-  fTigEff->Draw("e2");
-  gTigEff->Draw("same P");  
-
-
-  if(engabs<=0 || abseff<=0 || abserr<=0)
-    return canvas;
-    
-  // get the scaling factor for the fit to reproduce the required point
-  Double_t abscale = abseff/fTigEff->Eval(engabs), y;
-  
-  // now apply absolute scaling
-  for(int i=0; i<gTigEff->GetN(); i++){  
-    y = yy[i]*abscale;
-    gTigEff->SetPointError(i,0.0,(ye[i]/yy[i]+abserr/abseff)*y); 
-    gTigEff->SetPoint(i,xx[i],y);    
-  }
-  
-  // refit data
-  gTigEff->Fit(fTigEff,"N");
-  
-  // calculate fit error using only absolute scaling... approx, but still helpful
-  TF1 *flo = (TF1*)fTigEff->Clone("flower_abs"); 
-  flo->SetLineWidth(1);flo->SetLineStyle(2); flo->SetLineColor(3);
-  flo->SetParameter(0,fTigEff->GetParameter(0)*(abseff-abserr)/abseff);
-  TF1 *fup = (TF1*)fTigEff->Clone("fupper_abs");
-  fup->SetLineWidth(1);fup->SetLineStyle(2); fup->SetLineColor(3); 
-  fup->SetParameter(0,fTigEff->GetParameter(0)*(abseff+abserr)/abseff);  
-  
-  //fTigEff->Draw("e3");
-  gTigEff->Draw("AP");
-  flo->Draw("same");
-  fhi->Draw("same");
-  
-  return canvas;
-}
-
 
 Bool_t TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 

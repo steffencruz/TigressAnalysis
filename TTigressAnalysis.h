@@ -84,7 +84,7 @@ class TTigressAnalysis 	{
 
 
     static TCanvas *SetEfficiencyCurve(const char *efname, Double_t engabs=-1.0, 
-                                          Double_t effabs=-1.0, Double_t abserr=-1.0);
+                                      Double_t effabs=-1.0, Double_t abserr=0.0);
 		static TGraphErrors *GetEfficiencyCurve(void){ return gTigEff; }
 		static Double_t Efficiency(Double_t eng);
 		static Double_t EfficiencyError(Double_t eng);		
