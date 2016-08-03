@@ -701,7 +701,7 @@ Double_t TTigressAnalysis::Efficiency(Double_t eng){
 		return 0.0;
 	}
 	
-	return fTigEff->Eval(eng);//*rel2abs; 
+	return fTigEff->Eval(eng)*0.01;//*rel2abs; 
 	
 	//Double_t eff815 = 0.05; // approximate absolute TIGRESS efficiency at 815 keV
 	//Double_t eff815 = 0.078; // absolute TIGRESS efficiency using a bunch of gamma gates on this data (see excel doc)
@@ -810,8 +810,6 @@ TH2F *TTigressAnalysis::TH3Proj(TH3S *h, std::string str, Double_t minval, Doubl
 
 // Gate on exc energy range produce gamma spectrum. Compare to data and eliminate what we dont see experimentally
 // normalize theory to specific peak (direct to ground if possible)
-
-// use 1229 keV [414 & 815 peaks] for gam-gam coincidence efficiency?
 
 // ACCOUNTS FOR THE FACT THAT THE REAL DATA HAS GAMMAS FROM STATES OUTSIDE OF THE SELECTED RANGE
 // BY INCLUDING ALL STATES THAT ARE UP TO ±1.5 SIGMA BEYOND THE SPECIFIED EXC RANGE AND
