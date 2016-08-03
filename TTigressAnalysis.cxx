@@ -36,8 +36,8 @@ TH2F *TTigressAnalysis::hexcgam = NULL;
 TH1D *TTigressAnalysis::hgam = NULL;
 TH1D *TTigressAnalysis::hexc = NULL;
 
-Int_t TTigressAnalysis::gambinsz = 4;
-Int_t TTigressAnalysis::excbinsz = 40;
+Double_t TTigressAnalysis::gambinsz = 4;
+Double_t TTigressAnalysis::excbinsz = 40;
 Bool_t TTigressAnalysis::addback = true;		
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,8 +60,9 @@ Int_t TTigressAnalysis::nlines = 0;
 Int_t TTigressAnalysis::nsequences = 0;
 Int_t TTigressAnalysis::ncascades = 0;
 Int_t TTigressAnalysis::nstates = 0;
-TF1 *TTigressAnalysis::TigSigma = NULL;
-TF1 *TTigressAnalysis::TigEfficiency = NULL;
+TF1 *TTigressAnalysis::fTigSigma = NULL;
+TF1 *TTigressAnalysis::fTigEff = NULL;
+TGraphErrors *TTigressAnalysis::gTigEff = NULL;
 
 
 
@@ -72,9 +73,9 @@ TTigressAnalysis::~TTigressAnalysis()	{	}
 
 Bool_t TTigressAnalysis::Init(){
 	
-  gStyle->SetPalette(1);
-  gStyle->SetOptStat(0);
-  gStyle->SetTitleOffset(1.5,"Y");
+// gStyle->SetPalette(1);
+//  gStyle->SetOptStat(0);
+//  gStyle->SetTitleOffset(1.5,"Y");
       	
 	LoadHistos(Form("%s/Results_ExcGamThetaMats_Redwood.root",DIR),"dp"); // read histograms	
 	return InitLevelsGammas(100,false); // load nndc stuff
@@ -84,7 +85,14 @@ void TTigressAnalysis::Print(Option_t *opt) {
 
 	printf("\n\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
 	printf("\n\n\t____TTigressAnalysis____");
+  printf("\n\n\t Reaction   :- %s",histfile.c_str());
+  printf("\n\t Histo File   :- %s",histfile.c_str());
+  printf("\n\t NNDC File    :- %s",nndcfile.c_str());
 
+  printf("\n\n\t Gam bin size :- %.1f",gambinsz);
+  printf("\n\t Exc bin size :- %.1f",excbinsz);
+  printf("\n\t Addback      :- %s",addback?"TRUE":"FALSE");
+  printf("\n\t Verbose      :- %s",verbose?"TRUE":"FALSE");
 	printf("\n\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\n\n\n");
 		
 }
@@ -105,6 +113,7 @@ void TTigressAnalysis::Clear(Option_t *opt) {
 	gambinsz = 1;
 	excbinsz = 1;	
 	addback = true;
+	
 }
 
 Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac){
@@ -173,7 +182,7 @@ TH1D *TTigressAnalysis::Gam(Double_t exc_lo, Double_t exc_hi){
   	h = (TH1D*)hgam->Clone("Gammas");
 	
 	h->Rebin(gambinsz/h->GetBinWidth(0));	
-  h->SetTitle(Form("%s; Gamma Energy [keV]; Counts / %i keV",h->GetTitle(),gambinsz));	
+  h->SetTitle(Form("%s; Gamma Energy [keV]; Counts / %.1f keV",h->GetTitle(),h->GetBinWidth(0)));	
 
 	return h;	
 }
@@ -223,7 +232,7 @@ TH1D *TTigressAnalysis::GamGated(Double_t emin, Double_t emax, Double_t bg0, Dou
   TH1D *hg = TH1Sum(hpt[0],hpt[3],1,-0.5);
   hg->Scale(0.5);
 	hg->Rebin(gambinsz/hg->GetBinWidth(0));
-  hg->SetNameTitle("GatedGammas",Form("Gammma Energy Coincident With Gated Gam %sEnergy; Gamma energy [keV]; Counts / %i keV",exc_hi>0?"& Exc ":"",gambinsz));
+  hg->SetNameTitle("GatedGammas",Form("Gammma Energy Coincident With Gated Gam %sEnergy; Gamma energy [keV]; Counts / %.1f keV",exc_hi>0?"& Exc ":"",hg->GetBinWidth(0)));
       
 	return hg;
 }	
@@ -260,7 +269,7 @@ TH1D *TTigressAnalysis::ExcGated(Double_t emin, Double_t emax, Double_t bg0, Dou
 	he->SetLineColor(1);
 	he->GetYaxis()->SetTitleOffset(1.3);
 	he->Rebin(excbinsz/he->GetBinWidth(0));
-  he->SetNameTitle("ExcEnergy",Form("Excitation Energy Coincident With Gated Gamma Energy; Excitation Energy [keV]; Counts / %i keV",excbinsz));
+  he->SetNameTitle("ExcEnergy",Form("Excitation Energy Coincident With Gated Gamma Energy; Excitation Energy [keV]; Counts / %.1f keV",excbinsz));
 
 	return he;
 }
@@ -588,16 +597,16 @@ TF1 *TTigressAnalysis::CorrelationFunction(Double_t par0, Double_t par1, Double_
 
 Double_t TTigressAnalysis::Efficiency(Double_t eng){
 
-	if(!TigEfficiency){
+	if(!fTigEff){
 		printf("\n\t Warning :  Tigress Efficiency has not been set!\n\n");
 		return 0.0;
 	}
 	
 	//Double_t eff815 = 0.05; // approximate absolute TIGRESS efficiency at 815 keV
 	Double_t eff815 = 0.078; // absolute TIGRESS efficiency using a bunch of gamma gates on this data (see excel doc)
-	Double_t rel2abs = eff815/TigEfficiency->Eval(815.0);
+	Double_t rel2abs = eff815/fTigEff->Eval(815.0);
 	
-	return TigEfficiency->Eval(eng)*rel2abs; 
+	return fTigEff->Eval(eng)*rel2abs; 
 }
 
 Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
@@ -706,28 +715,100 @@ TH2F *TTigressAnalysis::TH3Proj(TH3S *h, std::string str, Double_t minval, Doubl
 ////////////////////////////////////////////////////////////////////////////////
 
 Bool_t TTigressAnalysis::InitLevelsGammas(Int_t nmax, Bool_t verb){
-	gStyle->SetOptStat(0);
-	gStyle->SetTitleXOffset(1.3);
-	gStyle->SetTitleYOffset(1.5);	
+//	gStyle->SetOptStat(0);
+//	gStyle->SetTitleXOffset(1.3);
+//	gStyle->SetTitleYOffset(1.5);	
 	
 	SetVerbose(verb);
 	Bool_t success = LoadLevelsGammas(Form("%s/Sr96_LevelsGammas.txt",DIR),nmax);
 	
 	// with appropriate peak widths we can identify multiple adjacent peaks	
-	TigSigma = new TF1("func_sig","[0]+[1]*TMath::Power(x,[2])",0,4000); // power law?
-	TigSigma->SetParameters(-4.74,0.679,0.409); // from fitting singles data	
-	TigSigma->SetNpx(4000);
-	TigSigma->SetTitle("TIGRESS Resolution Curve; Energy [keV]; Peak Sigma [keV]");
-
-	// Relative Efficiency		
-	TigEfficiency = new TF1("func_eff","[0]*pow(10.,[1]*log10(x)+[2]*pow(log10(x),2.)+[3]*pow(1/x,2.))",0,4000);
-	TigEfficiency->SetParameters(1.77634e+06,0.394454,-0.145119,-848.751);	
-	TigEfficiency->SetParameter(0,TigEfficiency->GetParameter(0)/TigEfficiency->GetMaximum());
-	TigEfficiency->SetNpx(4000);
-	TigEfficiency->SetTitle("TIGRESS Efficiency Curve; Energy [keV]; Relative Efficiency"); 
+	fTigSigma = new TF1("func_sig","[0]+[1]*TMath::Power(x,[2])",0,4000); // power law?
+	fTigSigma->SetParameters(-4.74,0.679,0.409); // from fitting singles data	
+	fTigSigma->SetNpx(4000);
+	fTigSigma->SetTitle("TIGRESS Resolution Curve; Energy [keV]; Peak Sigma [keV]");
 
 	return success;
 }
+
+TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engabs, Double_t abseff, Double_t abserr){
+
+  const char *absmsg, *addmsg;
+  if(engabs>0 && abseff>0 && abserr>0){
+    absmsg = "Absolute ";
+    addmsg = "Addback ";
+  } else {
+    absmsg = " ";
+    addmsg = " ";    
+  }
+    
+  gTigEff = new TGraphErrors();    
+  gTigEff->SetNameTitle("EffData",Form("TIGRESS %s%sEfficiency Curve; Energy [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
+
+  std::ifstream infile(efname);
+  Double_t eng, eff, err;
+  while(infile.good()){
+    infile >> eng >> eff >> err;
+
+    gTigEff->SetPoint(gTigEff->GetN(),eng,eff);
+    gTigEff->SetPointError(gTigEff->GetN()-1,0,err);
+  }
+  infile.close();
+
+	// Relative Efficiency		
+	fTigEff = new TF1("func_eff","[0]*pow(10.,[1]*log10(x)+[2]*pow(log10(x),2.)+[3]*pow(1/x,2.))",0,4000);
+	fTigEff->SetNpx(4000);
+	fTigEff->SetParameters(35,-0.14,0.052,-2308);	
+//	fTigEff->SetParameter(0,fTigEff->GetParameter(0)/fTigEff->GetMaximum());
+  fTigEff->SetNameTitle("EffFit",Form("TIGRESS %s%sEfficiency Curve; Energy [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
+  
+   // fit data
+  gTigEff->Fit(fTigEff,"M");  
+  Double_t *xx = gTigEff->GetX(), *yy = gTigEff->GetY(), *ye = gTigEff->GetEY();
+  
+  Double_t chi2=0;
+  for(int i=0; i<gTigEff->GetN();i++)
+    chi2 += pow(yy[i]-fTigEff->Eval(xx[i]),2.0)/ye[i];
+   printf("\n\n\n \tChi2 = %f, Chi2/NDF = %f\n\n",chi2,chi2/(gTigEff->GetN()-1));   
+  
+  TCanvas *canvas = new TCanvas("EfficiencyCurve","EfficiencyCurve",800,500); 
+  canvas->SetGrid();
+  fTigEff->Draw("e2");
+  gTigEff->Draw("same P");  
+
+
+  if(engabs<=0 || abseff<=0 || abserr<=0)
+    return canvas;
+    
+  // get the scaling factor for the fit to reproduce the required point
+  Double_t abscale = abseff/fTigEff->Eval(engabs), y;
+  
+  // now apply absolute scaling
+  for(int i=0; i<gTigEff->GetN(); i++){  
+    y = yy[i]*abscale;
+    gTigEff->SetPointError(i,0.0,(ye[i]/yy[i]+abserr/abseff)*y); 
+    gTigEff->SetPoint(i,xx[i],y);    
+  }
+  
+  // refit data
+  gTigEff->Fit(fTigEff,"N");
+  
+  // calculate fit error using only absolute scaling... approx, but still helpful
+  TF1 *flo = (TF1*)fTigEff->Clone("flower_abs"); 
+  flo->SetLineWidth(1);flo->SetLineStyle(2); flo->SetLineColor(3);
+  flo->SetParameter(0,fTigEff->GetParameter(0)*(abseff-abserr)/abseff);
+  TF1 *fup = (TF1*)fTigEff->Clone("fupper_abs");
+  fup->SetLineWidth(1);fup->SetLineStyle(2); fup->SetLineColor(3); 
+  fup->SetParameter(0,fTigEff->GetParameter(0)*(abseff+abserr)/abseff);  
+  
+  //fTigEff->Draw("e3");
+  gTigEff->Draw("AP");
+  flo->Draw("same");
+  fhi->Draw("same");
+  
+  return canvas;
+}
+
 
 Bool_t TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 
@@ -949,7 +1030,7 @@ void TTigressAnalysis::FixIntensities(Double_t emin, Double_t emax, Double_t ega
 		Double_t effcorr = 1.0;
 		if(egam){
 			// perform basic gamma gate with subtraction regions
-			hdata = GamGated(egam-3*TigSigma->Eval(egam),egam+3*TigSigma->Eval(egam),0,0,0,0,emin,emax);
+			hdata = GamGated(egam-3*fTigSigma->Eval(egam),egam+3*fTigSigma->Eval(egam),0,0,0,0,emin,emax);
 			hdata->SetTitle(Form("Gamma Coincidences [w. %.1f keV] From Data With Exc Range %.1f - %.1f keV; Gamma Energy [keV]; Counts / %.0f keV",egam,emin,emax,hdata->GetBinWidth(0)));
 			effcorr = Efficiency(egam);
 		}	else {
@@ -1671,8 +1752,8 @@ TH1D *TTigressAnalysis::MakeRealistic(TH1D *hgam, Bool_t abseff){
 		
 		// define a gaussian centered at bin center with sigma = sig and integral = hcalc->GetBinContent(i)		
 		x = hgam->GetBinCenter(i);
-		sig = TigSigma->Eval(x);
-		eff = TigEfficiency->Eval(x);		
+		sig = fTigSigma->Eval(x);
+		eff = fTigEff->Eval(x);		
 		
 		func->SetParameters(eff*val/(sqrt(2*3.14159)*sig),x,sig);
 		// now get this histogram and use it as a filter over the data

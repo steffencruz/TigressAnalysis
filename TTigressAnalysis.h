@@ -8,6 +8,7 @@
 #include<TH3S.h>
 #include<TH2F.h>
 #include<TH1D.h>
+#include<TGraphErrors.h>
 #include<THStack.h>
 #include<TCanvas.h>
 
@@ -81,6 +82,10 @@ class TTigressAnalysis 	{
 										Double_t &bg0, Double_t &bg1, 
 										Double_t &bg2, Double_t &bg3);
 
+
+    static TCanvas *SetEfficiencyCurve(const char *efname, Double_t engabs=-1.0, 
+                                          Double_t effabs=-1.0, Double_t abserr=-1.0);
+		static TGraphErrors *GetEfficiencyCurve(void){ return gTigEff; }
 		static Double_t Efficiency(Double_t eng);
 		static Double_t EfficiencyError(Double_t eng);		
 		
@@ -102,8 +107,8 @@ class TTigressAnalysis 	{
 		static TH2F *hgamgam,*hexcgam;
 		static TH1D *hgam,*hexc;
 		
-		static Int_t gambinsz;
-		static Int_t excbinsz;	
+		static Double_t gambinsz;
+		static Double_t excbinsz;	
 		static Bool_t addback;	
 
 		
@@ -166,7 +171,8 @@ class TTigressAnalysis 	{
 		
 		static TH2F *htrans, *hgams, *hseq;
 		static TH1D *hint;
-		static TF1 *TigSigma, *TigEfficiency;
+		static TF1 *fTigSigma, *fTigEff;
+		static TGraphErrors *gTigEff;
 		        
 	ClassDef(TTigressAnalysis,0)
 };
