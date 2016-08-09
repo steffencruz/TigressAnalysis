@@ -15,6 +15,10 @@
 #include <string>
 #include <map>
 
+#ifndef DIR
+#define DIR "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/TigressAnalysis"
+#endif
+
 // Reads a root file which contains gamma-gamma-excitation energy matrices and carries out coincidence analyses
 // WARNING : THE TH3F
 // * exc gamma gamma
@@ -82,9 +86,14 @@ class TTigressAnalysis 	{
 										Double_t &bg0, Double_t &bg1, 
 										Double_t &bg2, Double_t &bg3);
 
+    static Double_t GetPopulationStrength(TH1 *hist, Double_t exc, Double_t egam,
+                                              Double_t emin=0.0, Double_t emax=0.0, 
+                                              Double_t bg0=0.0, Double_t bg1=0.0, 
+                                              Double_t bg2=0.0, Double_t bg3=0.0);
 
-    static TCanvas *SetEfficiencyCurve(const char *efname, Double_t engabs=-1.0, 
-                                      Double_t effabs=-1.0, Double_t abserr=0.0);
+
+    static TCanvas *SetEfficiencyCurve(const char *efname=Form("%s/AddbackEfficiencyData.txt",DIR),
+                    Double_t engabs=815.0, Double_t effabs=7.33, Double_t abserr=0.04);
 		static TGraphErrors *GetEfficiencyCurve(void){ return gTigEff; }
 		static Double_t Efficiency(Double_t eng);
 		static Double_t EfficiencyError(Double_t eng);		

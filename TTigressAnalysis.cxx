@@ -16,9 +16,6 @@
 #include <algorithm>    // std::count
 #include <vector>       
 
-#ifndef DIR
-#define DIR "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/TigressAnalysis"
-#endif
 
 ClassImp(TTigressAnalysis)
 
@@ -76,8 +73,7 @@ Bool_t TTigressAnalysis::Init(){
 // gStyle->SetPalette(1);
 //  gStyle->SetOptStat(0);
 //  gStyle->SetTitleOffset(1.5,"Y");
-
-  SetEfficiencyCurve("AddbackEfficiencyData.txt",815,7.33,0.04);
+  SetEfficiencyCurve();
       	
 	LoadHistos(Form("%s/Results_ExcGamThetaMats_Redwood.root",DIR),"dp"); // read histograms	
 	return InitLevelsGammas(100,false); // load nndc stuff
@@ -551,6 +547,7 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
 	return h2;		
 }
 
+
 void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){ 
 
 	Double_t gBgConstant, gBgSlope, gContent, gMean, gSigma, gBinW, gChi2pNDF;
@@ -563,7 +560,7 @@ void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t em
 	gMean    = 0.5 * ( emax + emin);  
 	gSigma   = 0.3 * ( emax - emin); 
 	gBinW 		= hist->GetBinWidth(1);
-	//   printf("__________________\n_The Start Values_\n  Bin Width: %d\n Mean Value: %d\n    Content: %d\n      Sigma: %d\n__________________\n",gBinW,gMean,gContent,gSigma);
+	 //  printf("__________________\n_The Start Values_\n  Bin Width: %d\n Mean Value: %d\n    Content: %d\n      Sigma: %d\n__________________\n",gBinW,gMean,gContent,gSigma);
 
 	fitfunc->SetParameters(0, 0, gContent, gMean, gSigma); 
 
@@ -583,10 +580,37 @@ void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t em
 	gBgConstant = fitfunc->GetParameter(0);
 	gBgSlope    = fitfunc->GetParameter(1);
 	gContent    = fitfunc->GetParameter(2)/gBinW;
+	fitfunc->SetParameter(2,gContent);
+	fitfunc->SetParError(2,fitfunc->GetParError(2)/gBinW);
 	gMean       = fitfunc->GetParameter(3);
 	gSigma      = fitfunc->GetParameter(4);	
 	gChi2pNDF   = fitfunc->GetChisquare() / fitfunc->GetNDF();
 
+}
+
+Double_t TTigressAnalysis::GetPopulationStrength(TH1 *hist, Double_t exc, Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
+
+	SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);	
+
+  FitPeakExcludeRange(hist,emin,emax,bg0,bg1,bg2,bg3);
+  
+  TF1 *func = hist->GetFunction("gauss_linbg_exc");
+  for(int fn=0; fn<5; fn++)
+  	printf("\n\t%s : %6.2f +/- %6.2f",func->GetParName(fn),func->GetParameter(fn),func->GetParError(fn));
+ 
+  Double_t counts = func->GetParameter(2);
+  Double_t eff = fTigEff->Eval(egam);
+  Double_t br = BranchingRatio(exc,egam);
+
+  if(!fTigEff || eff<0 || !br)
+    return 0;
+  
+  Double_t strength = counts/(br*eff*0.01);  
+  
+  printf("\n\n\t Eff @ ~%.1f keV = %.2f %%, Branching ratio = %.2f",egam,eff,br);
+  printf("\n\t -> Strength = %.2f\n\n",strength);
+   
+  return strength;
 }
 
 TF1 *TTigressAnalysis::CorrelationFunction(Double_t par0, Double_t par1, Double_t par2){
@@ -631,13 +655,13 @@ TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engab
   fTigEff->SetNameTitle("EffFit",Form("TIGRESS %s%sEfficiency Curve; Energy [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
   
    // fit data
-  gTigEff->Fit(fTigEff,"QEM");  
+  gTigEff->Fit(fTigEff,"QM");  
   Double_t *xx = gTigEff->GetX(), *yy = gTigEff->GetY(), *ye = gTigEff->GetEY();
   
   Double_t chi2=0;
   for(int i=0; i<gTigEff->GetN();i++)
     chi2 += pow(yy[i]-fTigEff->Eval(xx[i]),2.0)/ye[i];
-   if(verbose) printf("\n\n\n \tChi2 = %f, Chi2/NDF = %f\n\n",chi2,chi2/(gTigEff->GetN()-1));   
+  // if(verbose) printf("\n\n\n \tChi2 = %f, Chi2/NDF = %f\n\n",chi2,chi2/(gTigEff->GetN()-1));   
   
   TCanvas *canvas = new TCanvas("EfficiencyCurve","EfficiencyCurve",800,500); 
   canvas->SetGrid();
@@ -982,6 +1006,7 @@ std::vector<int>  TTigressAnalysis::PrintCascades(Int_t from_state, Double_t ega
 }
 
 Double_t TTigressAnalysis::BranchingRatio(Double_t state_eng, Double_t egam){
+// this could be done using the gamma spectrum so that the transition can be from an intermediate state in the decay cascade
 
 	Int_t from_state = GetStateIndex(state_eng,false);
 	if(!BuildDecayScheme(from_state+1))
