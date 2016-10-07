@@ -15,19 +15,35 @@
 #include <string>
 #include <map>
 
-#ifndef DIR
-#define DIR "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/TigressAnalysis"
+#ifndef TIGDIR
+#define TIGDIR "$PROGDIR/TigressAnalysis"
 #endif
 
-// Reads a root file which contains gamma-gamma-excitation energy matrices and carries out coincidence analyses
-// WARNING : THE TH3F
-// * exc gamma gamma
-// * gamma gamma 
-// * exc gamma 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+// _____________ TTigressAnalysis : a gamma-particle analysis class ____________
+// 
+//  TTigressAnalysis is used to analyze data by applying [in almost any combination] :-
+//   1. Gamma-gates
+//   2. Particle-gates
+//   3. Angular-gates
+// 
+//  _____ Input ____
+//  Requires a specific which is produced by MakeExcGamThetaMats.C
+//  This file contains [but is not limited to] the following main data structures :-
+//  * TH3S  exc-gamma-gamma
+//  * TH2F  exc-gamma-thetacm 
+//  * TH2F  exc-gamma 
+//  * TH2F  gamma-gamma 
+//  * TH1D  exc
+//  * TH1D  gamma
+//
+// _____ Optional additions _____
+//  Same as above, but for specific regions of SHARC [UQQQ, UBOX and DBOX].
+//  Names and conventions will be taken care of by MakeExcGamThetaMats.C
+//
+//    Made by Steffen Cruz [2016]
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-// gamma gamma coincidences are now done on theory spectra too.
-// there is no efficiency applied so far.
-// it should be as simple as scaling the final spectrum by TigEff->Eval(egam)
 
 class TTigressAnalysis 	{
 	
@@ -45,6 +61,8 @@ class TTigressAnalysis 	{
 		static void SetExcBinSz(Int_t wid) { excbinsz = wid; }
 		static Int_t GetGamBinSz() { return gambinsz; }
 		static Int_t GetExcBinSz() { return excbinsz; }
+		
+		static Bool_t DetectorSelector(std::string opt="all");
 						
 		static TH1D *Gam(Double_t exmin=-1.0, Double_t exmax=-1.0);
 											
@@ -76,6 +94,11 @@ class TTigressAnalysis 	{
 											Double_t exmin=-1.0, Double_t exmax=-1.0);
 											
 		static TH2F *GamAngCorrMat(Double_t exmin=-1.0, Double_t exmax=-1.0);													
+
+		static Double_t FitPeakStats(TH1 *hist, 
+											Double_t emin, Double_t emax, 
+											Double_t bg0, Double_t bg1, 
+											Double_t bg2, Double_t bg3);
 													
 		static void FitPeakExcludeRange(TH1 *hist, 
 											Double_t emin, Double_t emax, 
@@ -86,16 +109,20 @@ class TTigressAnalysis 	{
 										Double_t &bg0, Double_t &bg1, 
 										Double_t &bg2, Double_t &bg3);
 
-    static Double_t GetPopulationStrength(TH1 *hist, Double_t exc, Double_t egam,
+    static void SetPeakLims(Double_t egam, Double_t &emin, Double_t &emax);
+  
+    static Double_t GetPopulationStrength(TH1D *hist, Double_t exc, Double_t egam,
                                               Double_t emin=0.0, Double_t emax=0.0, 
                                               Double_t bg0=0.0, Double_t bg1=0.0, 
                                               Double_t bg2=0.0, Double_t bg3=0.0);
 
-
-    static TCanvas *SetEfficiencyCurve(const char *efname=Form("%s/AddbackEfficiencyData.txt",DIR),
+    static TCanvas *SetEfficiencyCurve(const char *efname=Form("%s/AddbackEfficiencyData.txt",TIGDIR),
                     Double_t engabs=815.0, Double_t effabs=7.33, Double_t abserr=0.04);
+		
 		static TGraphErrors *GetEfficiencyCurve(void){ return gTigEff; }
+		
 		static Double_t Efficiency(Double_t eng);
+		
 		static Double_t EfficiencyError(Double_t eng);		
 		
 		static TF1 *CorrelationFunction(Double_t par0=1.0,Double_t par1=1.0,Double_t par2=1.0);
@@ -110,17 +137,32 @@ class TTigressAnalysis 	{
 
 		static Double_t gaus_lbg_exc(Double_t *x, Double_t *par);
 
+    static Bool_t IncludeRegion(Int_t indx);
+    static void CloneDefaults();
+    static void ResetDefaults();    
+    
 		static std::string histfile;
 		static std::string reaction;
-		static TH3S *hexcgamgam,*hexcthcmgam,*hexcgamthtig;
-		static TH2F *hgamgam,*hexcgam;
-		static TH1D *hgam,*hexc;
 		
+		// general histograms [all SHARC]
+		static TH3S *hexcgamgam, *hexcthcmgam, *hexcgamthtig;
+		static TH2F *hexcgam, *hgamgam;
+		static TH1D *hgam, *hexc;		
+    // detector specific histos [UQQQ, UBOX, DBOX]
+		static TH3S *hexcgamgam_sel[3];
+		static TH2F *hgamgam_sel[3];
+		static TH2F *hexcgam_sel[3];		
+		static TH1D *hexc_sel[3];
+		static TH1D *hgam_sel[3];
+		// detector selected histograms
+		static TH3S *hegg;
+		static TH2F *hgg, *heg;
+		static TH1D *hg, *he;
+
 		static Double_t gambinsz;
 		static Double_t excbinsz;	
 		static Bool_t addback;	
 
-		
 		
 		//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//
 	public:
@@ -180,7 +222,7 @@ class TTigressAnalysis 	{
 		
 		static TH2F *htrans, *hgams, *hseq;
 		static TH1D *hint;
-		static TF1 *fTigSigma, *fTigEff;
+		static TF1 *fTigSigma, *fTigEff, *fTigEffLow, *fTigEffUp;
 		static TGraphErrors *gTigEff;
 		        
 	ClassDef(TTigressAnalysis,0)
