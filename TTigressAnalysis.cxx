@@ -92,7 +92,7 @@ Bool_t TTigressAnalysis::Init(){
 //  gStyle->SetTitleOffset(1.5,"Y");
   SetEfficiencyCurve();
       
-	LoadHistos(Form("%s/Results_ExcGamThetaMats_Redwood.root",TIGDIR),"dp"); // read histograms	
+	LoadHistos(Form("%s/Results_RedwoodMats.root",TIGDIR),"dp"); // read histograms	
 	return InitLevelsGammas(100,false); // load nndc stuff
 }
 
@@ -152,10 +152,14 @@ Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac){
 			histfile = "";
 			return false;
 		}
+		
+		// this assigns errors to all new histograms
+		TH1::SetDefaultSumw2();
 
     // read file and set histograms
     if(f1->IsOpen()){			
-		histfile.assign(fname);
+	  	histfile.assign(fname);
+	  	
       hexcgamgam        = (TH3S*)f1->Get(Form("%s/ExcGamGam_%s",reac,reac)); 
       hexcgamgam_sel[0] = (TH3S*)f1->Get(Form("%s/ExcGamGamUQ_%s",reac,reac)); 
       hexcgamgam_sel[1] = (TH3S*)f1->Get(Form("%s/ExcGamGamUB_%s",reac,reac)); 
@@ -301,8 +305,11 @@ TH1D *TTigressAnalysis::Gam(Double_t exc_lo, Double_t exc_hi){
   	h->SetTitle(Form("Gamma Singles Gated on Excitation Energy Range %.1f - %.1f keV",exc_lo,exc_hi));
   } else 
   	h = (TH1D*)hg->Clone("GammaEnergy");
-	
-	h->Rebin(gambinsz/h->GetBinWidth(0));	
+
+  Double_t reb = gambinsz/h->GetBinWidth(1);
+  if(reb>1)
+	  h->Rebin((Int_t)reb);	
+	h->Rebin((Int_t)reb);	
   h->SetNameTitle("GammaEnergy",Form("%s; Gamma Energy [keV]; Counts / %.1f keV",h->GetTitle(),h->GetBinWidth(0)));	
 
 	return h;	
@@ -327,6 +334,11 @@ TH1D *TTigressAnalysis::GamGated(Double_t emin, Double_t emax, Double_t bg0, Dou
   	hegg->GetZaxis()->SetRange(zp[0],zp[1]);
   // produce an excitation energy (Z axis) gated gamma gamma matrix
   	h2 = (TH2F*)hegg->Project3D("yx");   
+    // manually set error
+  	for(int i1=1; i1<=h2->GetNbinsX(); i1++)
+      for(int i2=1; i2<=h2->GetNbinsY(); i2++)
+        h2->SetBinError(i1,i2,sqrt((double)h2->GetBinContent(i1,i2)));
+    
   } else 
   	h2 = hgg;
   
@@ -351,8 +363,11 @@ TH1D *TTigressAnalysis::GamGated(Double_t emin, Double_t emax, Double_t bg0, Dou
   hpt[3] = TH1Sum(hpt[1],hpt[2]);
   // peak - bgtot
   TH1D *h = TH1Sum(hpt[0],hpt[3],1,-0.5);
-  h->Scale(0.5);
-	h->Rebin(gambinsz/h->GetBinWidth(0));
+  h->Scale(0.5); // accounts for double filling of gam-gam matrix
+  
+  Double_t reb = gambinsz/h->GetBinWidth(1);
+  if(reb>1)
+	  h->Rebin((Int_t)reb);
   h->SetNameTitle("GatedGammaEnergy",Form("Gammma Energy Coincident With Gated Gam %sEnergy; Gamma energy [keV]; Counts / %.1f keV",exc_hi>0?"& Exc ":"",h->GetBinWidth(0)));
       
 	return h;
@@ -542,7 +557,8 @@ TCanvas *TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t 
 
   TH1D *hexcgated = ExcGated(emin,emax,bg0,bg1,bg2,bg3); 
   hexcgated->GetXaxis()->SetRangeUser(0,6000);
-  hexcgated->DrawCopy();    
+  hexcgated->SetLineColor(kBlue);   
+  hexcgated->Draw();    
 
   TBox *bpex = new TBox(exc_lo,hexcgated->GetMinimum()*1.05,exc_hi,hexcgated->GetMaximum()*1.05);
   bpex->SetFillColor(3);
@@ -553,20 +569,17 @@ TCanvas *TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t 
 
   ////////////////////////////////////////////////////////////////////////////////////
   c->cd(2);
-	if(exc_lo>=0.0 && exc_hi>exc_lo){
-		TH1D *hexcgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3,exc_lo,exc_hi); 
-		hexcgamgated->GetXaxis()->SetRangeUser(0,1500);  
-		hexcgamgated->DrawCopy();
-	} else {
-    TH1D *hgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3); 
-    hgamgated->GetXaxis()->SetRangeUser(0,1500);
-    hgamgated->DrawCopy(); 
-	}  
+  TH1D *hexcgamgated = GamGated(emin,emax,bg0,bg1,bg2,bg3,exc_lo,exc_hi); 
+   hexcgamgated->Sumw2();
+  hexcgamgated->GetXaxis()->SetRangeUser(0,1500); 
+  hexcgamgated->SetLineColor(kBlue); 
+  hexcgamgated->Draw("");
+
   
   ////////////////////////////////////////////////////////////////////////////////////  
   c->cd(4);
   TH2F *hexcthcm = ExcThetaGated(emin,emax,bg0,bg1,bg2,bg3); 
-  hexcthcm->DrawCopy("colz");
+  hexcthcm->Draw("colz");
 
   ////////////////////////////////////////////////////////////////////////////////////  
   printf("\n\tMade Analysis Plots!\n\n");
@@ -645,7 +658,7 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
 		h2 = (TH2F*)TH3Proj(hexcgamthtig,"yx",exc_lo,exc_hi,gatesz); 
 	}
 	
-	h2->RebinY(gambinsz/h2->GetYaxis()->GetBinWidth(0));	
+	h2->RebinY(gambinsz/h2->GetYaxis()->GetBinWidth(1));	
   h2->SetNameTitle("GamVsThetaTig",Form("%s; TIGRESS Theta [deg]; Gamma Energy [keV]",h2->GetTitle()));	
 
 	return h2;		
@@ -976,6 +989,10 @@ Double_t TTigressAnalysis::gaus_lbg_exc(Double_t *x, Double_t *par){
 }
 
 TH1D *TTigressAnalysis::TH1Sum(TH1D *ha, TH1D *hb, Double_t sca, Double_t scb){
+	
+	if(!ha->GetSumw2N()) ha->Sumw2();
+	if(!hb->GetSumw2N()) hb->Sumw2();
+	  	
 	TH1D *h = (TH1D*) ha->Clone(Form("%s_%s",ha->GetName(),hb->GetName()));
 	h->Scale(sca);
 	h->Add(hb,scb);
@@ -983,6 +1000,10 @@ TH1D *TTigressAnalysis::TH1Sum(TH1D *ha, TH1D *hb, Double_t sca, Double_t scb){
 }
 
 TH2F *TTigressAnalysis::TH2Sum(TH2F *ha, TH2F *hb, Double_t sca, Double_t scb){
+
+	if(!ha->GetSumw2N()) ha->Sumw2();
+	if(!hb->GetSumw2N()) hb->Sumw2();
+	
 	TH2F *h = (TH2F*) ha->Clone(Form("%s_%s",ha->GetName(),hb->GetName()));
 	h->Scale(sca);
 	h->Add(hb,scb);
@@ -990,7 +1011,9 @@ TH2F *TTigressAnalysis::TH2Sum(TH2F *ha, TH2F *hb, Double_t sca, Double_t scb){
 }
 
 TH1D *TTigressAnalysis::TH2Proj(TH2F *h, char ax, Double_t minval, Double_t maxval, Double_t &sz){
-
+  
+	if(!h->GetSumw2N()) h->Sumw2();
+  
 	TAxis *axis;
 	if(ax=='x')
 		axis =	h->GetYaxis();
@@ -1028,6 +1051,7 @@ TH2F *TTigressAnalysis::TH3Proj(TH3S *h, std::string str, Double_t minval, Doubl
 	sz = c[1] - c[0];
 	
 	TH2F *h2 = (TH2F*) h->Project3D(str.c_str());
+	if(!h2->GetSumw2N()) h2->Sumw2();
 	
 	TH2F *h2safe = (TH2F*)h2->Clone("SafeCopy");
 	h2safe->SetName(Form("%s_py_%iTo%i",h->GetName(),b[0],b[1]));

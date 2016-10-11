@@ -15,19 +15,12 @@
 #include"TSharcAnalysis.h"
 #include"TReaction.h"
 
-Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
+Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 
 	TChain *chain = new TChain("EasyTree");
-	
-	//chain->Add("$DATADIR/sapling*");
-	
-	if(veasy)
-		chain->Add("$worktime/Jul22_2015/Veasy/veasy*");
-	else 
-		chain->Add("$DATADIR/redwood*");
-		
-	chain->ls();	
-			
+  chain->Add(Form("$DATADIR/%s*",trfname));		
+  printf("\n* Loaded:	%i %s trees *\n",chain->GetNtrees(),trfname);
+  
 	TReaction *r[3];	
 	r[0] = new TReaction("sr95","d","p","sr96",510.9,0,true);  	
 	printf("\n**  Made Reaction: %s",r[0]->GetNameFull());
@@ -36,9 +29,13 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 	r[2] = new TReaction("sr95","d","d","sr95",510.9,0,true); 
 	printf("\n**  Made Reaction: %s\n",r[2]->GetNameFull());
 
+	TList *list[3];	 // list for each reaction, list[0]="dp", list[1]="pp", list[2]="dd"
+
 	TSharcAnalysis::SetTarget(0.0,0.0,0.0,4.5,"cd2",0.5,0.5,0.5);
-	const char *fname = "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/SharcAnalysis/BadStrips.txt";
+	const char *fname = "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/SharcAnalysis/BadStrips.txt";	
 	TList *acclist = TSharcAnalysis::GetAcceptanceList(r[0],fname);
+	
+	TSharcAnalysis::Print();
 
 	// set tree branch addresses
 	UInt_t det=0,front=0,back=0,type=0,addsize=0;
@@ -63,7 +60,7 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 	chain->SetBranchAddress("eadd",&eadd);
 	chain->SetBranchAddress("tadd",&tadd);
 	chain->SetBranchAddress("thetadd",&thetadd);
-	
+		
 	// for different reactions
   TH3S *hexcgamgam[3], *hexcgamthetacm[3], *hexcgamthetalab[3], *hexcgamthetatig[3];//, *hexcgamthetacm2[3], *hexcgamthetalab2[3];
   TH2F *hgamgam[3], *hexcgam[3], *hexcthetacm[3], *hgamthetatig[3], *hthetatheta[3], *hphasetadd[3], *htaddtadd[3];
@@ -74,15 +71,13 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 	TH2F *hexcgam_sec[3][3], *hgamgam_sec[3][3];
 	TH1D *hexc_sec[3][3], *hgam_sec[3][3];
 	
-	TList *list[3];
-	TGraph *glab2cm[3];
-  
   TH2F *hkin = new TH2F("KinVsThetaLab","Kinematics For ^{95}Sr; Theta Lab [deg]; Energy [keV]",720,0,180,3000,0,30000);
   TH2F *hdengcm = new TH2F("DelVsThetaCm","ElasticKinematicsCm; Theta Cm [deg]; Delta Energy [keV]",720,0,180,1000,0,10000);    
     
 	printf("\n\n Making empty histograms .. %4.1f%%\r",0);	
   fflush(stdout);  
   const char *opt, *sec;
+  
   for(int i=0; i<3; i++){
   	
   	list[i] = new TList;
@@ -147,8 +142,6 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 			hgam_sec[i][j] = new TH1D(Form("Gam%s_%s",sec,opt),"",4000,0,4000);
 			hgam_sec[i][j]->SetTitle(Form("Gamma Energy [%s] '%s'; Gamma energy [keV];",sec,opt));	  		
 			list[i]->Add(hgam_sec[i][j]);	  	
-			
-
   	}			
   	
 		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",opt),"",800,-1000,7000);
@@ -189,34 +182,16 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 		htaddtadd[i]->SetTitle(Form("TAdd vs. TAdd For '%s'; TIGRESS time [ns]; TIGRESS time [ns]",opt));
 		list[i]->Add(htaddtadd[i]);
 		
-		glab2cm[i] = r[i]->ThetaVsTheta();
-		list[i]->Add(glab2cm[i]);
+		fflush(stdout);
+		
 	}
-	
-	printf(" Making empty histograms .. %4.1f%%      COMPLETE \n\n",100.0);	
+	printf(" Making empty histograms .. %4.1f%%     -- COMPLETE \n",100.0);	
 			
-/*		
-	TFile cutfile("$worktime/Jul22_2015/Veasy/timecuts.root","READ");
-	// TIMECUT1 = first band [	way better!! ]	
-	// TIMECUT2 = first and second band	combined
-	TCutG *timecut = (TCutG*) cutfile.Get("TIMECUT1");
-	//list->Add(timecut);
-*/
 	Double_t tmin = 230.0, tmax = 265.0; // large time window
 
-	// these should be suitable for all trees
-	TFile cutfile("$DATADIR/TimeCuts.root","READ");
-	TCutG* time_dbox = (TCutG*) cutfile.Get("TIME_DBOX");
-	TCutG* time_ubox = (TCutG*) cutfile.Get("TIME_UBOX");
-	TCutG* time_ubox2 = (TCutG*) cutfile.Get("TIME_UBOX2");
-	TCutG* time_uqqq = (TCutG*) cutfile.Get("TIME_UQQQ");
-	TCutG* timecut;
-	
-	TH1D *hgam1 = new TH1D("gam_notime","gam_notime",4000,0,4000);
-	TH1D *hgam2 = new TH1D("gam_time","gam_time",4000,0,4000);	
-	
 	printf("\n\n Filling histograms:-\n\n");
-	Int_t nentries=chain->GetEntries(), sec_indx;
+	Int_t nentries=chain->GetEntries(), sec_indx;	
+
 	for(int n=0; n<nentries; n++){
 	
 		chain->GetEntry(n);
@@ -230,20 +205,12 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 		if(TSharcAnalysis::BadStrip(det,front,-1) || TSharcAnalysis::BadStrip(det,-1,back))
 			continue;							
 		
-		if(veasy){
-			if(det==5 && n<23e6)
-				continue;		
-		// for veasy trees
-			thetalab = TSharcAnalysis::RandomizeThetaLab(det,front,back);
-			thetacm = glab2cm[type]->Eval(thetalab);
-		}	
-		
 		hkin->Fill(thetalab,ekin);
 	
 		if(type==0 && exc>7000)//|| thetalab<60)) // gets rid of inelastic 95Sr stuff in (d,p)
 			continue;		
 			
-		if(det<9)
+		if(det<9) // detector section identifier
 			sec_indx = 2;	
 		else if(det<13)
 			sec_indx = 1;			
@@ -263,14 +230,7 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 		hdengcm->Fill(thetacm,denergy);
 		
 		hthetatheta[type]->Fill(thetacm,thetalab);
-		/*
-		if(det<=8)
-			timecut = time_dbox;
-		else if(det>8 && det<=12)
-			timecut = time_ubox2;
-		else if(det>12 && det<=16)	
-			timecut = time_uqqq;	
-		*/
+
 		if(addsize>4) // only use first 3 gammas
 			addsize=3;
 			
@@ -279,15 +239,9 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 			for(int j=i+1; j<(int)addsize; j++){
 				htaddtadd[type]->Fill(tadd[i],tadd[j]);
 				
-//				if(!timecut->IsInside(tadd[i],phase) || eadd[i]<50.0) 
-//					continue;
-
 				if(tadd[i]<tmin || tadd[i]>tmax || eadd[i]<50.0) 
 					continue;								
 								
-//				if(!timecut->IsInside(tadd[j],phase) || eadd[j]<50.0) 
-//					continue;			
-
 				if(tadd[j]<tmin || tadd[j]>tmax || eadd[j]<50.0) 
 					continue;									
 					
@@ -307,17 +261,8 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 			}
 			hphasetadd[type]->Fill(tadd[i],phase);
 			
-			if(exc>800 && exc<1600 && type==0)
-				hgam1->Fill(eadd[i]);
-				
-//			if(!timecut->IsInside(tadd[i],phase) || eadd[i]<50.0) // gamma must be > 50 keV 
-//				continue;
-
 			if(tadd[i]<tmin || tadd[i]>tmax || eadd[i]<50.0) 
 				continue;							
-			
-			if(exc>800 && exc<1600 && type==0)
-				hgam2->Fill(eadd[i]);
 
 			hexcgam[type]->Fill(eadd[i],exc);		
 			hexcg[type]->Fill(exc);									
@@ -346,13 +291,7 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 	fflush(stdout);
 	
 	TFile *file;
-	file = new TFile("Results_ExcGamThetaMats_RedwoodDets.root","RECREATE");	
-	/*
-	if(veasy) 
-		file = new TFile("Results_ExcGamThetaMats_Veasy.root","RECREATE");
-	else
-		file = new TFile("Results_ExcGamThetaMats_Redwood.root","RECREATE");		
-	*/
+	file = new TFile("Results_RedwoodMats.root","RECREATE");	
 	
 	file->SetCompressionLevel(4);
 	
@@ -381,12 +320,10 @@ Int_t MakeExcGamThetaMats(Bool_t all_types=false, Bool_t veasy=false){
 	hkin->Write();
 	hdengcm->Write();
 	
-	hgam1->Write();
-	hgam2->Write();	
-
 	printf("\n\t Made File ' %s '\n\n",file->GetName());
 	
 	file->Close();
 	
   return 0;		
 }
+

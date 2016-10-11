@@ -16,7 +16,7 @@
 #include <map>
 
 #ifndef TIGDIR
-#define TIGDIR "$PROGDIR/TigressAnalysis"
+#define TIGDIR "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/TigressAnalysis"
 #endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
