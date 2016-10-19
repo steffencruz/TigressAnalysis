@@ -23,11 +23,13 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
   
 	TReaction *r[3];	
 	r[0] = new TReaction("sr95","d","p","sr96",510.9,0,true);  	
-	printf("\n**  Made Reaction: %s",r[0]->GetNameFull());
-	r[1] = new TReaction("sr95","p","p","sr95",510.9,0,true); 
-	printf("\n**  Made Reaction: %s",r[1]->GetNameFull());
-	r[2] = new TReaction("sr95","d","d","sr95",510.9,0,true); 
-	printf("\n**  Made Reaction: %s\n",r[2]->GetNameFull());
+	printf("\n**  Made Reaction: %s\n",r[0]->GetNameFull());
+	if(all_types){
+    r[1] = new TReaction("sr95","p","p","sr95",510.9,0,true); 
+    printf("\n**  Made Reaction: %s\n",r[1]->GetNameFull());
+    r[2] = new TReaction("sr95","d","d","sr95",510.9,0,true); 
+    printf("\n**  Made Reaction: %s\n\n",r[2]->GetNameFull());
+	}
 
 	TList *list[3];	 // list for each reaction, list[0]="dp", list[1]="pp", list[2]="dd"
 
@@ -67,18 +69,22 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 	TH1D *hgam[3], *hexc[3], *hexcg[3];
 	
 	// for different sharc sections
-	TH3S *hexcgamgam_sec[3][3];	
-	TH2F *hexcgam_sec[3][3], *hgamgam_sec[3][3];
+	TH3S *hexcgamgam_sec[3][3], *hexcgamthetatig_sec[3][3];	
+	TH2F *hexcgam_sec[3][3], *hgamgam_sec[3][3], *hgamthetatig_sec[3][3];
 	TH1D *hexc_sec[3][3], *hgam_sec[3][3];
 	
   TH2F *hkin = new TH2F("KinVsThetaLab","Kinematics For ^{95}Sr; Theta Lab [deg]; Energy [keV]",720,0,180,3000,0,30000);
   TH2F *hdengcm = new TH2F("DelVsThetaCm","ElasticKinematicsCm; Theta Cm [deg]; Delta Energy [keV]",720,0,180,1000,0,10000);    
     
-	printf("\n\n Making empty histograms .. %4.1f%%\r",0);	
+	printf("\n\n Making empty histograms .. %4.1f%%\r",0.0);	
   fflush(stdout);  
   const char *opt, *sec;
   
-  for(int i=0; i<3; i++){
+  int imax = 3;
+  if(!all_types) // limit this to dp 
+    imax=1;
+  
+  for(int i=0; i<imax; i++){
   	
   	list[i] = new TList;
   
@@ -88,7 +94,7 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
   		opt = "pp";	
   	if(i==2)
   		opt = "dd";
-  		
+  	  	
   	// useful for gamma gamma analysis	-- binning is large and gamma energy range is small
 		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,350,0,7000); 
 		hexcgamgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy '%s'; Gamma energy [keV]; Gamma energy [keV]; Excitation energy [keV]",opt));
@@ -120,12 +126,16 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 			if(j==2)
 				sec = "DB";		
 				
-			printf(" Making empty histograms .. %4.1f%%\r",(double)(3*i+j)/9.0*100.0);	
+			printf(" Making empty histograms .. %4.1f%%\r",(double)(imax*i+j)/(3*imax)*100.0);	
 			fflush(stdout);
 			
 			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,350,0,7000); 
 			hexcgamgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy [%s] '%s'; Gamma energy [keV]; Gamma energy [keV]; Excitation energy [keV]",sec,opt));
-			list[i]->Add(hexcgamgam_sec[i][j]);		
+			list[i]->Add(hexcgamgam_sec[i][j]);	
+			
+      hexcgamthetatig_sec[i][j] = new TH3S(Form("ExcGamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000,800,-1000,7000);
+      hexcgamthetatig_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta [%s] For '%s'; Theta Lab [deg]; Gamma Energy [keV]; Excitation Energy [keV]",sec,opt));
+      list[i]->Add(hexcgamthetatig_sec[i][j]); 				
 			
 			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,700,0,7000);
 			hexcgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy [%s] '%s'; Gamma energy [keV]; Excitation energy [keV]",sec,opt));	  		
@@ -141,7 +151,11 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 				
 			hgam_sec[i][j] = new TH1D(Form("Gam%s_%s",sec,opt),"",4000,0,4000);
 			hgam_sec[i][j]->SetTitle(Form("Gamma Energy [%s] '%s'; Gamma energy [keV];",sec,opt));	  		
-			list[i]->Add(hgam_sec[i][j]);	  	
+			list[i]->Add(hgam_sec[i][j]);	  	 
+
+      hgamthetatig_sec[i][j] = new TH2F(Form("GamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000);
+      hgamthetatig_sec[i][j]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For [%s] '%s'; Theta Lab [deg]; Gamma Energy [keV]",sec,opt));
+      list[i]->Add(hgamthetatig_sec[i][j]);    			
   	}			
   	
 		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",opt),"",800,-1000,7000);
@@ -188,6 +202,7 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 	printf(" Making empty histograms .. %4.1f%%     -- COMPLETE \n",100.0);	
 			
 	Double_t tmin = 230.0, tmax = 265.0; // large time window
+	Double_t thmin = 0.0; // option to use only largest angle data : disabled
 
 	printf("\n\n Filling histograms:-\n\n");
 	Int_t nentries=chain->GetEntries(), sec_indx;	
@@ -200,6 +215,9 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 			printf("\t processing event %8i/%i\t[%5.2f%%]\r",n,nentries,(Double_t)n/nentries*100.0);
 			fflush(stdout);
 		}
+		
+		if(!all_types && type>0)
+		  continue;			
 		
 		// fill hist excluding dead strips and other options
 		if(TSharcAnalysis::BadStrip(det,front,-1) || TSharcAnalysis::BadStrip(det,-1,back))
@@ -215,7 +233,7 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 		else if(det<13)
 			sec_indx = 1;			
 		else if(det>=13)
-			sec_indx = 0;	
+			sec_indx = 0;
 						
 		hexc[type]->Fill(exc);	
 		// sectional excitaion spectra
@@ -243,7 +261,10 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 					continue;								
 								
 				if(tadd[j]<tmin || tadd[j]>tmax || eadd[j]<50.0) 
-					continue;									
+					continue;				
+					
+				if(thetadd[i]<thmin || thetadd[j]<thmin) 
+				  continue;						
 					
 				hexcgamgam[type]->Fill(eadd[i],eadd[j],exc);
 				hexcgamgam[type]->Fill(eadd[j],eadd[i],exc);
@@ -263,6 +284,9 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 			
 			if(tadd[i]<tmin || tadd[i]>tmax || eadd[i]<50.0) 
 				continue;							
+				
+      if(thetadd[i]<thmin) 
+        continue;					
 
 			hexcgam[type]->Fill(eadd[i],exc);		
 			hexcg[type]->Fill(exc);									
@@ -272,10 +296,13 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 			hgam_sec[type][sec_indx]->Fill(eadd[i]);			
 			
 			hgamthetatig[type]->Fill(thetadd[i],eadd[i]);
-
+			hgamthetatig_sec[type][sec_indx]->Fill(thetadd[i],eadd[i]);
+			
+			hexcgamthetatig[type]->Fill(thetadd[i],eadd[i],exc);
+			hexcgamthetatig_sec[type][sec_indx]->Fill(thetadd[i],eadd[i],exc);			
+			
 			hexcgamthetalab[type]->Fill(thetalab,eadd[i],exc);
 			hexcgamthetacm[type]->Fill(thetacm,eadd[i],exc);		
-			hexcgamthetatig[type]->Fill(thetadd[i],eadd[i],exc);
 		}
 		
 	}
@@ -291,7 +318,7 @@ Int_t MakeRedwoodMats(Bool_t all_types=false, const char *trfname = "redwood"){
 	fflush(stdout);
 	
 	TFile *file;
-	file = new TFile("Results_RedwoodMats.root","RECREATE");	
+	file = new TFile("Results_RedwoodMatsGam.root","RECREATE");	
 	
 	file->SetCompressionLevel(4);
 	

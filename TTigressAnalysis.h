@@ -86,14 +86,7 @@ class TTigressAnalysis 	{
 		static TCanvas *AnalyzeGammas(Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
-											Double_t exmin=-1.0, Double_t exmax=-1.0);
-
-		static TH1D *GamAngCorr(Double_t emin, Double_t emax,
-											Double_t bg0=0.0, Double_t bg1=0.0, 
-											Double_t bg2=0.0, Double_t bg3=0.0,		
-											Double_t exmin=-1.0, Double_t exmax=-1.0);
-											
-		static TH2F *GamAngCorrMat(Double_t exmin=-1.0, Double_t exmax=-1.0);													
+											Double_t exmin=-1.0, Double_t exmax=-1.0);												
 
 		static Double_t FitPeakStats(TH1 *hist, 
 											Double_t emin, Double_t emax, 
@@ -123,8 +116,19 @@ class TTigressAnalysis 	{
 		
 		static Double_t Efficiency(Double_t eng);
 		
-		static Double_t EfficiencyError(Double_t eng);		
+		static Double_t EfficiencyError(Double_t eng);	
 		
+		static TH1D *GamAngCorr(Double_t emin, Double_t emax,
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0,		
+											Double_t exmin=-1.0, Double_t exmax=-1.0);
+											
+		static TH2F *GamAngCorrMat(Double_t exmin=-1.0, Double_t exmax=-1.0);				
+		
+    static TH1D *GetHitPattern(Int_t detmin=5, Int_t detmax=16, Int_t crymin=0, Int_t crymax=3, Int_t segmin=0, Int_t segmax=7);
+
+		static TH1D *NormalizeThetaHits(TH1D *htheta, Int_t segval=0);
+
 		static TF1 *CorrelationFunction(Double_t par0=1.0,Double_t par1=1.0,Double_t par2=1.0);
 		
 	private: 
@@ -150,12 +154,13 @@ class TTigressAnalysis 	{
 		static TH1D *hgam, *hexc;		
     // detector specific histos [UQQQ, UBOX, DBOX]
 		static TH3S *hexcgamgam_sel[3];
-		static TH2F *hgamgam_sel[3];
-		static TH2F *hexcgam_sel[3];		
+		static TH3S *hexcgamthtig_sel[3];
+		static TH2F *hexcgam_sel[3];
+		static TH2F *hgamgam_sel[3];		
 		static TH1D *hexc_sel[3];
 		static TH1D *hgam_sel[3];
 		// detector selected histograms
-		static TH3S *hegg;
+		static TH3S *hegg, *hegt;
 		static TH2F *hgg, *heg;
 		static TH1D *hg, *he;
 

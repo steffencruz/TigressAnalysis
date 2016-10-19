@@ -15,7 +15,9 @@
 #include<fstream>
 #include <cmath>
 #include <algorithm>    // std::count
-#include <vector>       
+#include <vector>     
+
+#include <TTigress.h>  
 
 
 ClassImp(TTigressAnalysis)
@@ -24,33 +26,36 @@ std::string TTigressAnalysis::histfile = "";
 std::string TTigressAnalysis::reaction = "";
 std::string TTigressAnalysis::nndcfile = "";
 
-TH3S *TTigressAnalysis::hegg              = NULL;
-TH3S *TTigressAnalysis::hexcgamgam        = NULL;
-TH3S *TTigressAnalysis::hexcgamgam_sel[3] = {NULL,NULL,NULL};
+TH3S *TTigressAnalysis::hegg                = NULL;
+TH3S *TTigressAnalysis::hexcgamgam          = NULL;
+TH3S *TTigressAnalysis::hexcgamgam_sel[3]   = {NULL,NULL,NULL};
 
-TH3S *TTigressAnalysis::hexcthcmgam       = NULL;
-TH3S *TTigressAnalysis::hexcgamthtig      = NULL;
+TH3S *TTigressAnalysis::hegt                = NULL;
+TH3S *TTigressAnalysis::hexcgamthtig        = NULL;
+TH3S *TTigressAnalysis::hexcgamthtig_sel[3] = {NULL,NULL,NULL};
 
-TH2F *TTigressAnalysis::heg               = NULL;
-TH2F *TTigressAnalysis::hexcgam           = NULL;
-TH2F *TTigressAnalysis::hexcgam_sel[3]    = {NULL,NULL,NULL};
+TH3S *TTigressAnalysis::hexcthcmgam         = NULL;
 
-TH2F *TTigressAnalysis::hgg               = NULL;
-TH2F *TTigressAnalysis::hgamgam           = NULL;
-TH2F *TTigressAnalysis::hgamgam_sel[3]    = {NULL,NULL,NULL};
+TH2F *TTigressAnalysis::heg                 = NULL;
+TH2F *TTigressAnalysis::hexcgam             = NULL;
+TH2F *TTigressAnalysis::hexcgam_sel[3]      = {NULL,NULL,NULL};
 
-TH1D *TTigressAnalysis::he                = NULL;
-TH1D *TTigressAnalysis::hexc              = NULL;
-TH1D *TTigressAnalysis::hexc_sel[3]       = {NULL,NULL,NULL};
+TH2F *TTigressAnalysis::hgg                 = NULL;
+TH2F *TTigressAnalysis::hgamgam             = NULL;
+TH2F *TTigressAnalysis::hgamgam_sel[3]      = {NULL,NULL,NULL};
 
-TH1D *TTigressAnalysis::hg                = NULL;
-TH1D *TTigressAnalysis::hgam              = NULL;
-TH1D *TTigressAnalysis::hgam_sel[3]       = {NULL,NULL,NULL};
+TH1D *TTigressAnalysis::he                  = NULL;
+TH1D *TTigressAnalysis::hexc                = NULL;
+TH1D *TTigressAnalysis::hexc_sel[3]         = {NULL,NULL,NULL};
+
+TH1D *TTigressAnalysis::hg                  = NULL;
+TH1D *TTigressAnalysis::hgam                = NULL;
+TH1D *TTigressAnalysis::hgam_sel[3]         = {NULL,NULL,NULL};
 
 
-Double_t TTigressAnalysis::gambinsz = 1.0;
-Double_t TTigressAnalysis::excbinsz = 40.0;
-Bool_t TTigressAnalysis::addback = true;		
+Double_t TTigressAnalysis::gambinsz         = 1.0;
+Double_t TTigressAnalysis::excbinsz         = 40.0;
+Bool_t TTigressAnalysis::addback            = true;		
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -128,6 +133,7 @@ void TTigressAnalysis::Clear(Option_t *opt) {
 
   for(int i=0; i<3; i++){
     hexcgamgam_sel[i] = NULL;
+    hexcgamthtig_sel[i] = NULL;
     hexcgam_sel[i] = NULL;
     hgamgam_sel[i] = NULL; 
     hexc_sel[i] = NULL;     
@@ -160,33 +166,37 @@ Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac){
     if(f1->IsOpen()){			
 	  	histfile.assign(fname);
 	  	
-      hexcgamgam        = (TH3S*)f1->Get(Form("%s/ExcGamGam_%s",reac,reac)); 
-      hexcgamgam_sel[0] = (TH3S*)f1->Get(Form("%s/ExcGamGamUQ_%s",reac,reac)); 
-      hexcgamgam_sel[1] = (TH3S*)f1->Get(Form("%s/ExcGamGamUB_%s",reac,reac)); 
-      hexcgamgam_sel[2] = (TH3S*)f1->Get(Form("%s/ExcGamGamDB_%s",reac,reac)); 
+      hexcgamgam          = (TH3S*)f1->Get(Form("%s/ExcGamGam_%s",reac,reac)); 
+      hexcgamgam_sel[0]   = (TH3S*)f1->Get(Form("%s/ExcGamGamUQ_%s",reac,reac)); 
+      hexcgamgam_sel[1]   = (TH3S*)f1->Get(Form("%s/ExcGamGamUB_%s",reac,reac)); 
+      hexcgamgam_sel[2]   = (TH3S*)f1->Get(Form("%s/ExcGamGamDB_%s",reac,reac)); 
 
-      hexcthcmgam       = (TH3S*)f1->Get(Form("%s/ExcGamThetaCm_%s",reac,reac));
-      hexcgamthtig      = (TH3S*)f1->Get(Form("%s/ExcGamTigressTheta_%s",reac,reac));     
+      hexcthcmgam         = (TH3S*)f1->Get(Form("%s/ExcGamThetaCm_%s",reac,reac));
+      
+      hexcgamthtig        = (TH3S*)f1->Get(Form("%s/ExcGamTigressTheta_%s",reac,reac));     
+      hexcgamthtig_sel[0] = (TH3S*)f1->Get(Form("%s/ExcGamTigressThetaUQ_%s",reac,reac));     
+      hexcgamthtig_sel[1] = (TH3S*)f1->Get(Form("%s/ExcGamTigressThetaUB_%s",reac,reac));     
+      hexcgamthtig_sel[2] = (TH3S*)f1->Get(Form("%s/ExcGamTigressThetaDB_%s",reac,reac));     
 
-      hexcgam 	        = (TH2F*)f1->Get(Form("%s/ExcGam_%s",reac,reac));   
-      hexcgam_sel[0] 	  = (TH2F*)f1->Get(Form("%s/ExcGamUQ_%s",reac,reac));       
-      hexcgam_sel[1] 	  = (TH2F*)f1->Get(Form("%s/ExcGamUB_%s",reac,reac));       
-      hexcgam_sel[2] 	  = (TH2F*)f1->Get(Form("%s/ExcGamDB_%s",reac,reac));       
+      hexcgam 	          = (TH2F*)f1->Get(Form("%s/ExcGam_%s",reac,reac));   
+      hexcgam_sel[0] 	    = (TH2F*)f1->Get(Form("%s/ExcGamUQ_%s",reac,reac));       
+      hexcgam_sel[1] 	    = (TH2F*)f1->Get(Form("%s/ExcGamUB_%s",reac,reac));       
+      hexcgam_sel[2] 	    = (TH2F*)f1->Get(Form("%s/ExcGamDB_%s",reac,reac));       
 
-      hgamgam 	        = (TH2F*)f1->Get(Form("%s/GamGam_%s",reac,reac));  
-      hgamgam_sel[0] 	  = (TH2F*)f1->Get(Form("%s/GamGamUQ_%s",reac,reac));       
-      hgamgam_sel[1] 	  = (TH2F*)f1->Get(Form("%s/GamGamUB_%s",reac,reac));       
-      hgamgam_sel[2] 	  = (TH2F*)f1->Get(Form("%s/GamGamDB_%s",reac,reac));   
+      hgamgam 	          = (TH2F*)f1->Get(Form("%s/GamGam_%s",reac,reac));  
+      hgamgam_sel[0]      = (TH2F*)f1->Get(Form("%s/GamGamUQ_%s",reac,reac));       
+      hgamgam_sel[1]      = (TH2F*)f1->Get(Form("%s/GamGamUB_%s",reac,reac));       
+      hgamgam_sel[2]      = (TH2F*)f1->Get(Form("%s/GamGamDB_%s",reac,reac));   
 
-      hexc 			        = (TH1D*)f1->Get(Form("%s/Exc_%s",reac,reac));  
-      hexc_sel[0]       = (TH1D*)f1->Get(Form("%s/ExcUQ_%s",reac,reac));       
-      hexc_sel[1]       = (TH1D*)f1->Get(Form("%s/ExcUB_%s",reac,reac));       
-      hexc_sel[2]       = (TH1D*)f1->Get(Form("%s/ExcDB_%s",reac,reac));           
+      hexc 			         = (TH1D*)f1->Get(Form("%s/Exc_%s",reac,reac));  
+      hexc_sel[0]        = (TH1D*)f1->Get(Form("%s/ExcUQ_%s",reac,reac));       
+      hexc_sel[1]        = (TH1D*)f1->Get(Form("%s/ExcUB_%s",reac,reac));       
+      hexc_sel[2]        = (TH1D*)f1->Get(Form("%s/ExcDB_%s",reac,reac));           
 
-      hgam			        = (TH1D*)f1->Get(Form("%s/Gam_%s",reac,reac));
-      hgam_sel[0]       = (TH1D*)f1->Get(Form("%s/GamUQ_%s",reac,reac));       
-      hgam_sel[1]       = (TH1D*)f1->Get(Form("%s/GamUB_%s",reac,reac));       
-      hgam_sel[2]       = (TH1D*)f1->Get(Form("%s/GamDB_%s",reac,reac));               
+      hgam			         = (TH1D*)f1->Get(Form("%s/Gam_%s",reac,reac));
+      hgam_sel[0]        = (TH1D*)f1->Get(Form("%s/GamUQ_%s",reac,reac));       
+      hgam_sel[1]        = (TH1D*)f1->Get(Form("%s/GamUB_%s",reac,reac));       
+      hgam_sel[2]        = (TH1D*)f1->Get(Form("%s/GamDB_%s",reac,reac));               
     }
     
     // print status and set flags
@@ -203,16 +213,17 @@ Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac){
       printf("\n Loaded Addditional Histograms :-\n");
       for(int i=0; i<3; i++){
         printf(" + Detector region %i :\n",i);
-        if(hexcgamgam_sel[i]) printf("\t+  (TH3S*) %s\n",hexcgamgam_sel[i]->GetName()); 
-        if(hexcgam_sel[i])    printf("\t+  (TH2F*) %s\n",hexcgam_sel[i]->GetName()); 
-        if(hgamgam_sel[i])    printf("\t+  (TH2F*) %s\n",hgamgam_sel[i]->GetName()); 
-        if(hexc_sel[i])       printf("\t+  (TH1D*) %s\n",hexc_sel[i]->GetName()); 
-        if(hgam_sel[i])       printf("\t+  (TH1D*) %s\n",hgam_sel[i]->GetName()); 
+        if(hexcgamgam_sel[i])   printf("\t+  (TH3S*) %s\n",hexcgamgam_sel[i]->GetName()); 
+        if(hexcgamthtig_sel[i]) printf("\t+  (TH3S*) %s\n",hexcgamthtig_sel[i]->GetName()); 
+        if(hexcgam_sel[i])      printf("\t+  (TH2F*) %s\n",hexcgam_sel[i]->GetName()); 
+        if(hgamgam_sel[i])      printf("\t+  (TH2F*) %s\n",hgamgam_sel[i]->GetName()); 
+        if(hexc_sel[i])         printf("\t+  (TH1D*) %s\n",hexc_sel[i]->GetName()); 
+        if(hgam_sel[i])         printf("\t+  (TH1D*) %s\n",hgam_sel[i]->GetName()); 
       }
     }
     
     // by default the histograms cover all of SHARC  [not a specific range]
-    if(!DetectorSelector("all")||!hexcthcmgam||!hexcgamthtig)
+    if(!DetectorSelector("all")||!hexcthcmgam)
       return false;
      
     reaction.assign(reac);  
@@ -255,7 +266,7 @@ Bool_t TTigressAnalysis::DetectorSelector(std::string opt){
 Bool_t TTigressAnalysis::IncludeRegion(Int_t indx){
 
   if( indx<0 ){
-    if(!hexcgamgam||!hexcgam||!hgamgam||!hgam||!hexc)
+    if(!hexcgamgam||!hexcgamthtig||!hexcgam||!hgamgam||!hgam||!hexc)
       return false;
     else {
       CloneDefaults();
@@ -269,13 +280,15 @@ Bool_t TTigressAnalysis::IncludeRegion(Int_t indx){
     return false;
   }
   
-  printf("\t-> hexcgamgam += (TH3S*) %s\n",hexcgamgam_sel[indx]->GetName()); 
-  printf("\t-> hexcgam    += (TH2F*) %s\n",hexcgam_sel[indx]->GetName());  
-  printf("\t-> hgamgam    += (TH2F*) %s\n",hgamgam_sel[indx]->GetName());  
-  printf("\t-> hexc       += (TH1D*) %s\n",hexc_sel[indx]->GetName());  
-  printf("\t-> hgam       += (TH1D*) %s\n",hgam_sel[indx]->GetName()); 
+  printf("\t-> hexcgamgam   += (TH3S*) %s\n",hexcgamgam_sel[indx]->GetName()); 
+  printf("\t-> hexcgamthtig += (TH3S*) %s\n",hexcgamthtig_sel[indx]->GetName()); 
+  printf("\t-> hexcgam      += (TH2F*) %s\n",hexcgam_sel[indx]->GetName());  
+  printf("\t-> hgamgam      += (TH2F*) %s\n",hgamgam_sel[indx]->GetName());  
+  printf("\t-> hexc         += (TH1D*) %s\n",hexc_sel[indx]->GetName());  
+  printf("\t-> hgam         += (TH1D*) %s\n",hgam_sel[indx]->GetName()); 
 
   hegg->Add(hexcgamgam_sel[indx]);      
+  hegg->Add(hexcgamthtig_sel[indx]);      
   heg->Add(hexcgam_sel[indx]);   
   hgg->Add(hgamgam_sel[indx]);      
   he->Add(hexc_sel[indx]);      
@@ -606,8 +619,14 @@ TH1D *TTigressAnalysis::GamAngCorr(Double_t emin, Double_t emax, Double_t bg0, D
   hp[3] = TH1Sum(hp[1],hp[2],peaksz/bglosz,peaksz/bghisz);
   
   // peak - bgtot
-  TH1D *ht = TH1Sum(hp[0],hp[3],1,-0.5);	
+  TH1D *htot = TH1Sum(hp[0],hp[3],1,-0.5);
+  htot->SetName(Form("CountsVsTigTheta_Gam%.0fTo%.0f_Exc%.0fTo%.0f",emin,emax,exc_lo,exc_hi));
+  
+  // rebin data to remove segments and return to crystal positions
+  // divide through by basic hit pattern (normalized so max=1)
+  TH1D *ht = NormalizeThetaHits(htot,0);
 	
+	/*
 	TH1D *htmp = h2->ProjectionX();	
 	Double_t tot, val;
 	for(int i=htmp->FindFirstBinAbove(); i<=htmp->FindLastBinAbove(); i++){
@@ -621,6 +640,7 @@ TH1D *TTigressAnalysis::GamAngCorr(Double_t emin, Double_t emax, Double_t bg0, D
 	}
 
 	ht->Scale(1/ht->GetMaximum());	
+	*/
 	const char *msg = "";
 	if(exc_lo>0 && exc_hi>exc_lo)
 		msg = Form("And %.1f-%.1f keV Exc. Energy Range",exc_lo,exc_hi);
@@ -641,11 +661,11 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
 	// z = exc
 			
   TH2F *h2;
-	TAxis *zax = hexcgamthtig->GetZaxis();
+	TAxis *zax = hegt->GetZaxis();
 	Double_t gatesz;
   
   if(exc_lo>=0.0 && exc_hi>exc_lo){ // set exc energy gate if included
-		h2 = (TH2F*)TH3Proj(hexcgamthtig,"yx",exc_lo,exc_hi,gatesz); 
+		h2 = (TH2F*)TH3Proj(hegt,"yx",exc_lo,exc_hi,gatesz); 
   	Int_t zp[2] = {zax->FindBin(exc_lo), zax->FindBin(exc_hi)};
 		exc_lo = zax->GetBinCenter(zp[0]);
 		exc_hi = zax->GetBinCenter(zp[1]);
@@ -654,8 +674,8 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
   	h2->SetTitle(Form("Gammas Versus Tigress Theta Gated on Excitation Energy Range %.1f - %.1f keV",exc_lo,exc_hi));
   } else {
 		exc_lo = zax->GetBinCenter(1);
-		exc_hi = zax->GetBinCenter(hexcgamthtig->GetNbinsZ());
-		h2 = (TH2F*)TH3Proj(hexcgamthtig,"yx",exc_lo,exc_hi,gatesz); 
+		exc_hi = zax->GetBinCenter(hegt->GetNbinsZ());
+		h2 = (TH2F*)TH3Proj(hegt,"yx",exc_lo,exc_hi,gatesz); 
 	}
 	
 	h2->RebinY(gambinsz/h2->GetYaxis()->GetBinWidth(1));	
@@ -663,6 +683,68 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
 
 	return h2;		
 }
+
+TH1D *TTigressAnalysis::GetHitPattern(Int_t detmin, Int_t detmax, Int_t crymin, Int_t crymax, Int_t segmin, Int_t segmax){
+  
+  TH1D *hhit = new TH1D("TigHitPattern","TIGRESS Hit Pattern",180,0,180);
+  
+  for(int d=detmin; d<=detmax; d++)
+    for(int c=crymin; c<=crymax; c++)
+      for(int s=segmin; s<=segmax; s++)
+        hhit->Fill(TTigress::GetPosition(d,c,s).Theta()*TMath::RadToDeg());
+  
+  return hhit;
+}
+
+TH1D *TTigressAnalysis::NormalizeThetaHits(TH1D *htheta, Int_t segval){
+  
+  TH1D *hhit;
+  if(segval<0)
+    hhit = GetHitPattern(5,16,0,3,0,7);
+  else 
+    hhit = GetHitPattern(5,16,0,3,segval,segval);
+  
+  std::vector<int> binvals;
+  // build hit pattern without segments
+  for(int i=hhit->FindFirstBinAbove(); i<=hhit->FindLastBinAbove(); i++){
+    if(hhit->GetBinContent(i)==0)
+      continue;
+    binvals.push_back(i);
+  }
+  
+  TH1D *h = (TH1D*) htheta->Clone(Form("%s_NoSeg",htheta->GetName()));
+  h->Reset(); // remove all data
+  Double_t val;
+  Int_t bin_near, bin_diff;
+  for(int i=htheta->FindFirstBinAbove(); i<=htheta->FindLastBinAbove(); i++){
+    
+    val = htheta->GetBinContent(i);
+    if(!val)
+      continue; 
+    
+    bin_near = 0.;
+    bin_diff = 100.0;
+    // determine where to round the theta values to by using hit pattern
+    for(int j=0; j<binvals.size(); j++){
+      
+      if(abs(i-binvals.at(j))<bin_diff){
+    //    printf("\n i=%3i, j=%i\t htheta->GetBinCenter(i) = %.1f,  thetavals.at(j) = %.1f, diff = %.1f deg",i,j,htheta->GetBinCenter(i),thetavals.at(j),fabs(htheta->GetBinCenter(i)-thetavals.at(j)));      
+        bin_near = binvals.at(j);
+        bin_diff = abs(i-binvals.at(j));
+      }
+    }
+   
+   // put the content of htheta->Bin(i) into the nearest nonzero theta
+    h->Fill(bin_near-1,val); 
+  }
+ 
+  // scale the hit pattern
+  hhit->Scale(1/hhit->GetMaximum()); 
+  h->Divide(hhit);
+  
+  return h;
+}
+
 
 void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){ 
 
@@ -2070,6 +2152,7 @@ void TTigressAnalysis::GetRid(const char *name, Bool_t delete_all){
 
 void TTigressAnalysis::CloneDefaults(){
   hegg = (TH3S*) hexcgamgam->Clone("ExcGamGam");
+  hegt = (TH3S*) hexcgamthtig->Clone("ExcGamThetaTig");
   heg  = (TH2F*) hexcgam->Clone("ExcGam");
   hgg  = (TH2F*) hgamgam->Clone("GamGam");
   he   = (TH1D*) hexc->Clone("Exc");
@@ -2078,6 +2161,7 @@ void TTigressAnalysis::CloneDefaults(){
 
 void TTigressAnalysis::ResetDefaults(){
   hegg->Reset(); 
+  hegt->Reset(); 
   heg->Reset(); 
   hgg->Reset(); 
   he->Reset(); 
