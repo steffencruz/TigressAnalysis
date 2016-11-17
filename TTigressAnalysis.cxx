@@ -1494,7 +1494,7 @@ Double_t TTigressAnalysis::BranchingRatio(Double_t state_eng, Double_t egam){
 	
 	Double_t eng1 = energies.at(from_state);	
   TH1D *hg = DrawGammas(from_state+1); // uses gamma spectrum
-  hg->Draw();
+  //hg->Draw();
   Double_t val = hg->Integral((int)egam-1,(int)egam+1);
 	if(!val){
 	  printf("\n\t Error :  The transition %.1f keV -> %.1f keV was not found in file.\n\n",state_eng,state_eng-egam);
