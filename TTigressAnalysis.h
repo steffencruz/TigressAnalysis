@@ -41,6 +41,13 @@
 //  Same as above, but for specific regions of SHARC [UQQQ, UBOX and DBOX].
 //  Names and conventions will be taken care of by MakeExcGamThetaMats.C
 //
+//
+// _____ Known Bugs _____
+// Intensities in calculated spectra may be incorrect.  
+// State which decay through multiple cascades are adding the same transitions multiple 
+// times, once for each cascade, which results in an overestimation of final intensity.
+//      -  FIXED [16th Nov 2016]
+//
 //    Made by Steffen Cruz [2016]
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -82,7 +89,12 @@ class TTigressAnalysis 	{
 		static TH2F *ExcThetaGated(Double_t emin=0.0, Double_t emax=0.0, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0);
-																						
+
+    static TCanvas *QuickAnalysis(Double_t emin, Double_t emax, 
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0,
+											Double_t exmin=-1.0, Double_t exmax=-1.0);	
+																	
 		static TCanvas *AnalyzeGammas(Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
@@ -91,12 +103,19 @@ class TTigressAnalysis 	{
 		static Double_t FitPeakStats(TH1 *hist, 
 											Double_t emin, Double_t emax, 
 											Double_t bg0, Double_t bg1, 
-											Double_t bg2, Double_t bg3);
+											Double_t bg2, Double_t bg3,
+											Bool_t bg_only=false,Bool_t quad_fit=false);
 													
 		static void FitPeakExcludeRange(TH1 *hist, 
 											Double_t emin, Double_t emax, 
 											Double_t bg0, Double_t bg1, 
 											Double_t bg2, Double_t bg3);
+
+		static void FitBgExcludeRange(TH1 *hist, 
+											Double_t emin, Double_t emax, 
+											Double_t bg0, Double_t bg1, 
+											Double_t bg2, Double_t bg3,
+											Bool_t quad_fit=false);	
 
 		static void SetBackgroundLims(Double_t emin, Double_t emax, 
 										Double_t &bg0, Double_t &bg1, 
@@ -140,6 +159,7 @@ class TTigressAnalysis 	{
 		static TH2F *TH3Proj(TH3S *h, std::string ax, Double_t minval, Double_t maxval, Double_t &sz);
 
 		static Double_t gaus_lbg_exc(Double_t *x, Double_t *par);
+		static Double_t pol_bg_exc(Double_t *x, Double_t *par);
 
     static Bool_t IncludeRegion(Int_t indx);
     static void CloneDefaults();
@@ -194,7 +214,7 @@ class TTigressAnalysis 	{
 	  static TH1D *MakeRealistic(TH1D *hgam, Bool_t abseff = false);
 				
 		static TH1D *DrawIntensitites(){ return hint; }				
-		static Double_t BranchingRatio(Double_t from_state, Double_t egam);			
+		static Double_t BranchingRatio(Double_t state_eng, Double_t egam);			
 	private:
 	
 		static Int_t GetStateIndex(Double_t val, bool add_element=false);
