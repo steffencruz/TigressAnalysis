@@ -982,6 +982,61 @@ Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax,
   return counts;
 }
 
+// Normalizes theory curve to data in region emin-emax so that observed peaks can be compared to theory
+// ** emin and emax etc are for the normalization, not the gamma gate **
+TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
+
+  TCanvas *c;
+  if(!hdata){
+    c = new TCanvas;
+    if(!egam)
+      hdata = Gam(exc-400.0,exc+400.0);
+    else{
+      Double_t sig = Resolution(egam);
+      hdata = GamGated(egam-3.5*sig,egam+3.5*sig,0,0,0,0,exc-400.0,exc+400.0);
+    }
+  }
+  // get counts in data peak
+  FitPeakExcludeRange(hdata,emin,emax,bg0,bg1,bg2,bg3);
+  TF1 *func = hdata->GetFunction("gauss_linbg_exc");
+  for(int fn=0; fn<5; fn++)
+  	printf("\n\t%s : %6.2f +/- %6.2f",func->GetParName(fn),func->GetParameter(fn),func->GetParError(fn));
+ 
+  Double_t bin = hdata->GetBinWidth(1);
+  Double_t counts_data = func->GetParameter(2)/bin, cnterr_data = func->GetParError(2)/bin;
+  printf("\n\t** COUNTS  : %6.2f +/- %6.2f **  \n- - - - - - - - - - - - - - - - - - - - -\n\n",counts_data,cnterr_data);      
+
+  // make theory photo-peak
+	Int_t from_state = GetStateIndex(exc,false)+1;  
+	printf("\n\t EXC = %.2f keV ---> FROM_STATE = %i\n",exc,from_state);
+	if(from_state<=0)
+	  return hdata;
+	  
+  TH1D *hthry_tmp = DrawGammas(from_state,egam);
+  // add realistic width and apply efficiency
+  TH1D *hthry = MakeRealistic(hthry_tmp,true);
+  hthry->SetLineColor(kRed);
+  
+  Double_t reb = bin/hthry->GetBinWidth(1);
+  if(reb>1)
+    hthry->Rebin(reb);  
+  TAxis *xax = hthry->GetXaxis();
+  
+  // now get theory counts and find scaling factor
+  Double_t counts_thry = hthry->Integral(xax->FindBin(emin),xax->FindBin(emax));
+  Double_t scale_thry = counts_data/counts_thry;
+  
+  hthry->Scale(scale_thry);  
+  printf("\n\t** SCALE  : %6.2f +/- %6.2f **  \n- - - - - - - - - - - - - - - - - - - - -\n\n",scale_thry,cnterr_data/counts_data*scale_thry);  
+  
+  if(c){
+    hdata->Draw("hist");
+    hthry->Draw("same");
+  }
+  
+  return hthry;
+}
+
 Double_t TTigressAnalysis::GetPopulationStrength(TH1D *hist, Double_t exc, Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
   
   if(!hist){
@@ -1164,18 +1219,14 @@ TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engab
   return canvas;
 }
 
+
 Double_t TTigressAnalysis::Efficiency(Double_t eng){
 
 	if(!fTigEff){
 		printf("\n\t Warning :  Tigress Efficiency has not been set!\n\n");
 		return 0.0;
 	}
-	
-	return fTigEff->Eval(eng)*0.01;//*rel2abs; 
-	
-	//Double_t eff815 = 0.05; // approximate absolute TIGRESS efficiency at 815 keV
-	//Double_t eff815 = 0.078; // absolute TIGRESS efficiency using a bunch of gamma gates on this data (see excel doc)
-	//Double_t rel2abs = eff815/fTigEff->Eval(815.0);	
+	return fTigEff->Eval(eng)*0.01; 
 }
 
 Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
@@ -1188,6 +1239,18 @@ Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
   return 0.5*(fTigEffUp->Eval(eng)-fTigEffLow->Eval(eng))*0.01;
 //  Double_t relerr = 0.0906;
 //  return Efficiency(eng)*relerr;
+}
+
+Double_t TTigressAnalysis::Resolution(Double_t eng, Bool_t FWHM){
+
+	if(!fTigSigma){
+		printf("\n\t Warning :  Tigress Resolution has not been set!\n\n");
+		return 0.0;
+	}
+	Double_t sig = fTigSigma->Eval(eng);
+	if(FWHM)
+	  sig*=2.355;
+  return sig;
 }
 
 Double_t TTigressAnalysis::gaus_lbg_exc(Double_t *x, Double_t *par){
@@ -1505,7 +1568,6 @@ Double_t TTigressAnalysis::BranchingRatio(Double_t state_eng, Double_t egam){
   
   return val;  
 }		
-
 
 void TTigressAnalysis::ClearVars(){
 	
@@ -2026,7 +2088,7 @@ TCanvas *TTigressAnalysis::DrawDecayMats(Int_t from_state, Bool_t engaxis){
 	return c;
 }
 
-int TTigressAnalysis::GetStateIndex(Double_t val, bool add_element){ // compares a value to contents of vector to see if it exists as an element
+Int_t TTigressAnalysis::GetStateIndex(Double_t val, bool add_element){ // compares a value to contents of vector to see if it exists as an element
 	for(int i=0; i<(Int_t)energies.size(); i++){
 		if(fabs(val-energies.at(i))<1.0) // within 1 keV means same state
 			return i;
@@ -2292,7 +2354,7 @@ TH1D *TTigressAnalysis::MakeRealistic(TH1D *hgcalc, Bool_t abseff){
 		// define a gaussian centered at bin center with sigma = sig and integral = hcalc->GetBinContent(i)		
 		x = hgcalc->GetBinCenter(i);
 		sig = fTigSigma->Eval(x);
-		eff = fTigEff->Eval(x);		
+		eff = Efficiency(x);		
 		
 		func->SetParameters(eff*val/(sqrt(2*3.14159)*sig),x,sig);
 		// now get this histogram and use it as a filter over the data

@@ -31,7 +31,6 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
     printf("\n**  Made Reaction: %s\n\n",r[2]->GetNameFull());
 	}
 
-  
 	TSharcAnalysis::SetTarget(0.0,0.0,0.0,4.5,"cd2",0.5,0.5,0.5);
 	const char *fname = "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/SharcAnalysis/BadStrips.txt";	
 	TList *acclist = TSharcAnalysis::GetAcceptanceList(r[0],fname);
@@ -254,6 +253,10 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
 
 	printf("\n\n Filling histograms:-\n\n");
 	Int_t nentries=chain->GetEntries(), sec_indx;	
+	Double_t excr;
+  double d2r = 0.017453;
+  double r2d = 57.2958;
+	
 
 	for(int n=0; n<nentries; n++){
 	
@@ -272,6 +275,18 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
 			continue;							
 		
 		hkin->Fill(thetalab,ekin);
+		
+		// (p,p) can be reconstructed as (d,p) here too. 
+		// simples
+		if(type==1) // && penergy>50.0) // only with PID?
+		  type=0;
+		
+    // reconstruct excitation energy using fixed TReaction
+    excr = r[type]->GetExcEnergy(ekin*1e-3,thetalab*d2r,2)*1e3;
+    // set thetacm using the excitation energy
+    r[type]->SetExc(excr*1e3);
+    thetacm = r[type]->ConvertThetaLabToCm(thetalab*d2r,2)*r2d;
+    exc = excr;
 	
 		if(type==0 && exc>7000)//|| thetalab<60)) // gets rid of inelastic 95Sr stuff in (d,p)
 			continue;		

@@ -100,6 +100,11 @@ class TTigressAnalysis 	{
 											Double_t bg2=0.0, Double_t bg3=0.0,
 											Double_t exmin=-1.0, Double_t exmax=-1.0);												
 
+    static TH1D *FitTheory(TH1D *hdata, Double_t exc, Double_t egam,
+                      Double_t emin=0.0, Double_t emax=0.0, 
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0);
+
 		static Double_t FitPeakStats(TH1 *hist, 
 											Double_t emin, Double_t emax, 
 											Double_t bg0, Double_t bg1, 
@@ -115,7 +120,7 @@ class TTigressAnalysis 	{
 											Double_t emin, Double_t emax, 
 											Double_t bg0, Double_t bg1, 
 											Double_t bg2, Double_t bg3,
-											Bool_t quad_fit=false);	
+											Bool_t quad_fit=false);												
 
 		static void SetBackgroundLims(Double_t emin, Double_t emax, 
 										Double_t &bg0, Double_t &bg1, 
@@ -136,6 +141,8 @@ class TTigressAnalysis 	{
 		static Double_t Efficiency(Double_t eng);
 		
 		static Double_t EfficiencyError(Double_t eng);	
+		
+    static Double_t Resolution(Double_t eng, Bool_t FWHM=false);
 		
 		static TH1D *GamAngCorr(Double_t emin, Double_t emax,
 											Double_t bg0=0.0, Double_t bg1=0.0, 
