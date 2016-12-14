@@ -8,6 +8,7 @@
 #include<TH3S.h>
 #include<TH2F.h>
 #include<TH1D.h>
+#include<TF1.h>
 #include<TGraphErrors.h>
 #include<THStack.h>
 #include<TCanvas.h>
@@ -43,8 +44,9 @@
 //
 //
 // _____ Known Bugs _____
+// * Background subtraction must include a region both above and below the peak 
 // Intensities in calculated spectra may be incorrect.  
-// State which decay through multiple cascades are adding the same transitions multiple 
+// States which decay through multiple cascades are adding the same transitions multiple 
 // times, once for each cascade, which results in an overestimation of final intensity.
 //      -  FIXED [16th Nov 2016]
 //
@@ -70,6 +72,7 @@ class TTigressAnalysis 	{
 		static Int_t GetExcBinSz() { return excbinsz; }
 		
 		static Bool_t DetectorSelector(std::string opt="all");
+    static std::string SelectedDetector(void){ return detsel; }
 						
 		static TH1D *Gam(Double_t exmin=-1.0, Double_t exmax=-1.0);
 											
@@ -77,6 +80,8 @@ class TTigressAnalysis 	{
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
 											Double_t exmin=-1.0, Double_t exmax=-1.0);
+
+		static TH2F *GamGam(Double_t exmin=-1.0, Double_t exmax=-1.0);
 
 		static TH1D *ExcGated(Double_t emin=0.0, Double_t emax=0.0, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
@@ -107,8 +112,8 @@ class TTigressAnalysis 	{
 
 		static Double_t FitPeakStats(TH1 *hist, 
 											Double_t emin, Double_t emax, 
-											Double_t bg0, Double_t bg1, 
-											Double_t bg2, Double_t bg3,
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0,
 											Bool_t bg_only=false,Bool_t quad_fit=false);
 													
 		static void FitPeakExcludeRange(TH1 *hist, 
@@ -123,8 +128,8 @@ class TTigressAnalysis 	{
 											Bool_t quad_fit=false);												
 
 		static void SetBackgroundLims(Double_t emin, Double_t emax, 
-										Double_t &bg0, Double_t &bg1, 
-										Double_t &bg2, Double_t &bg3);
+								  		Double_t &bg0, Double_t &bg1, 
+									  	Double_t &bg2, Double_t &bg3);
 
     static void SetPeakLims(Double_t egam, Double_t &emin, Double_t &emax);
   
@@ -132,7 +137,16 @@ class TTigressAnalysis 	{
                                               Double_t emin=0.0, Double_t emax=0.0, 
                                               Double_t bg0=0.0, Double_t bg1=0.0, 
                                               Double_t bg2=0.0, Double_t bg3=0.0);
-
+    
+    static TList *CheckDopplerCorrection(Double_t egam, TH2F *h2=NULL,
+                      Double_t emin=0.0, Double_t emax=0.0,
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0);
+    
+    static void SetResolutionCurve();
+    
+    static TF1 *GetResolutionCurve();
+    
     static TCanvas *SetEfficiencyCurve(const char *efname=Form("%s/AddbackEfficiencyData.txt",TIGDIR),
                     Double_t engabs=815.0, Double_t effabs=7.33, Double_t abserr=0.04);
 		
@@ -174,6 +188,7 @@ class TTigressAnalysis 	{
     
 		static std::string histfile;
 		static std::string reaction;
+		static std::string detsel;
 		
 		// general histograms [all SHARC]
 		static TH3S *hexcgamgam, *hexcthcmgam, *hexcgamthtig;
@@ -193,7 +208,10 @@ class TTigressAnalysis 	{
 
 		static Double_t gambinsz;
 		static Double_t excbinsz;	
-		static Bool_t addback;	
+		static Bool_t addback;
+		
+		static TF1 *fTigSigma, *fTigEff, *fTigEffLow, *fTigEffUp;
+		static TGraphErrors *gTigEff;			
 
 		
 		//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//	//
@@ -254,8 +272,6 @@ class TTigressAnalysis 	{
 		
 		static TH2F *htrans, *hgams, *hseq;
 		static TH1D *hint;
-		static TF1 *fTigSigma, *fTigEff, *fTigEffLow, *fTigEffUp;
-		static TGraphErrors *gTigEff;
 		        
 	ClassDef(TTigressAnalysis,0)
 };

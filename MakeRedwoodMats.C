@@ -15,11 +15,11 @@
 #include"TSharcAnalysis.h"
 #include"TReaction.h"
 
-Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool_t all_types=false){
+Int_t MakeRedwoodMats(std::string outfilename = "Results_AnalysisMats.root", Bool_t all_types=false){
 
 	TChain *chain = new TChain("EasyTree");
-  chain->Add("$DATADIR/redwood_Sr95*");		
-  printf("\n* Loaded:	%i redwood trees *\n",chain->GetNtrees());
+  chain->Add("$DATADIR/evergreen_Sr95*");		
+  printf("\n* Loaded:	%i trees *\n",chain->GetNtrees());
   
 	TReaction *r[3];	
 	r[0] = new TReaction("sr95","d","p","sr96",510.9,0,true);  	
@@ -99,7 +99,7 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
   		opt = "dd";
   	  	
   	// useful for gamma gamma analysis	-- binning is large and gamma energy range is small
-		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,350,0,7000); 
+		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,4000,-1000,7000); 
 		hexcgamgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
 		list[i]->Add(hexcgamgam[i]);				
 
@@ -111,7 +111,7 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
   	hgamthetatig[i]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",opt));
   	list[i]->Add(hgamthetatig[i]);    	 
 
-		hexcgam[i] = new TH2F(Form("ExcGam_%s",opt),"",2000,0,4000,700,0,7000);
+		hexcgam[i] = new TH2F(Form("ExcGam_%s",opt),"",2000,0,4000,800,-1000,7000);
 		hexcgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{exc} [keV]",opt));	  		
   	list[i]->Add(hexcgam[i]);	
 		
@@ -144,7 +144,7 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
 			printf(" Making empty histograms .. %4.1f%%\r",(double)(imax*i+j)/(3*imax)*100.0);	
 			fflush(stdout);
 			
-			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,350,0,7000); 
+			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,400,-1000,7000); 
 			hexcgamgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));
 			list_sec[i][j]->Add(hexcgamgam_sec[i][j]);	
 			
@@ -156,7 +156,7 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
       hgamthetatig_sec[i][j]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For [%s] '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",sec,opt));
       list_sec[i][j]->Add(hgamthetatig_sec[i][j]);    
       			
-			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,700,0,7000);
+			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,800,-1000,7000);
 			hexcgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));	  		
 			list_sec[i][j]->Add(hexcgam_sec[i][j]);	
 		
@@ -245,6 +245,8 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
   }
 			
 	Double_t tmin = 230.0, tmax = 265.0; // large time window
+//	Double_t tmin = -1.0, tmax = 1.0; // no time window
+
 	Double_t thmin = 0;//135.0; // option to use only largest angle data : disabled
 
   printf("\n\n Using the following control parameters:-");
@@ -278,8 +280,8 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
 		
 		// (p,p) can be reconstructed as (d,p) here too. 
 		// simples
-		if(type==1) // && penergy>50.0) // only with PID?
-		  type=0;
+	//	if(type==1) // && penergy>50.0) // only with PID?
+	//	  type=0;
 		
     // reconstruct excitation energy using fixed TReaction
     excr = r[type]->GetExcEnergy(ekin*1e-3,thetalab*d2r,2)*1e3;
@@ -288,7 +290,7 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
     thetacm = r[type]->ConvertThetaLabToCm(thetalab*d2r,2)*r2d;
     exc = excr;
 	
-		if(type==0 && exc>7000)//|| thetalab<60)) // gets rid of inelastic 95Sr stuff in (d,p)
+		if(type==0 && exc>10000)//|| thetalab<60)) // gets rid of inelastic 95Sr stuff in (d,p)
 			continue;		
 			
 		if(det<9) // detector section identifier
@@ -299,7 +301,7 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
 			sec_indx = 0;
 						
 		hexc[type]->Fill(exc);	
-		// sectional excitaion spectra [only dp]
+		// sectional excitation spectra [only dp]
 		if(type==0) hexc_sec[0][sec_indx]->Fill(exc);	
 				
 		// fill the gamma energy = 0 bin with everything [including events not coincident with TIGRESS]				
@@ -384,7 +386,7 @@ Int_t MakeRedwoodMats(std::string outfilename = "Results_RedwoodMats.root", Bool
 	TFile *file;
 	file = new TFile(outfilename.c_str(),"RECREATE");	
 	
-	file->SetCompressionLevel(4);
+	file->SetCompressionLevel(1);
 	
 	file->mkdir("dp");
 	file->cd("dp");	
