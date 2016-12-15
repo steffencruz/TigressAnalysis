@@ -17,7 +17,7 @@
 #include <algorithm>    // std::count
 #include <vector>     
 
-//#include <TTigress.h>  
+#include <TTigress.h>  
 
 
 ClassImp(TTigressAnalysis)
@@ -805,7 +805,6 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
 	return h2;		
 }
 
-/*
 TH1D *TTigressAnalysis::GetHitPattern(Int_t detmin, Int_t detmax, Int_t crymin, Int_t crymax, Int_t segmin, Int_t segmax){
   
   TH1D *hhit = new TH1D("TigHitPattern","TIGRESS Hit Pattern",180,0,180);
@@ -817,7 +816,6 @@ TH1D *TTigressAnalysis::GetHitPattern(Int_t detmin, Int_t detmax, Int_t crymin, 
   
   return hhit;
 }
-*/
 
 TH1D *TTigressAnalysis::NormalizeThetaHits(TH1D *htheta, Int_t segval){
   
@@ -1034,6 +1032,11 @@ TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Doub
       hdata = GamGated(egam-3.5*sig,egam+3.5*sig,0,0,0,0,exc-400.0,exc+400.0);
     }
   }
+  // make sure peak and background range is set
+  if(!emin || !emax)
+    SetPeakLims(egam,emin,emax);
+  SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);  
+  
   // get counts in data peak
   FitPeakExcludeRange(hdata,emin,emax,bg0,bg1,bg2,bg3);
   TF1 *func = hdata->GetFunction("gauss_linbg_exc");
@@ -1051,6 +1054,18 @@ TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Doub
 	  return hdata;
 	  
   TH1D *hthry_tmp = DrawGammas(from_state,egam);
+  if(hthry_tmp->GetEntries()==0){
+    printf("\n\t No gamma-rays could be found in coincidence with %.1f keV.\n",egam);
+    return hdata;
+  }
+  printf("\n\t GAM \t INTENSITY");
+  Double_t val=0.0;
+  for(int i=hthry_tmp->FindFirstBinAbove();i<=hthry_tmp->FindLastBinAbove(); i++){
+    val = hthry_tmp->GetBinContent(i);
+    if(val)
+      printf("\n\t-> %.1f\t%.1e",hthry_tmp->GetBinCenter(i),val);
+  }
+  printf("\n\n");
   // add realistic width and apply efficiency
   TH1D *hthry = MakeRealistic(hthry_tmp,true);
   hthry->SetLineColor(kRed);
@@ -1066,6 +1081,7 @@ TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Doub
   Double_t scalerr_thry = relerr_thry*scale_thry;
   
   hthry->Scale(scale_thry);    
+  printf("\n\t** SCALE  : %6.2f +/- %6.2f **  \n- - - - - - - - - - - - - - - - - - - - -\n\n",scale_thry,scalerr_thry);     
   
   if(egam){
     Double_t eff=Efficiency(egam), eff_err=EfficiencyError(egam);

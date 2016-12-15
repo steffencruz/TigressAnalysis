@@ -5,7 +5,7 @@ GRSISYS=/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/GRSISor
 
 CFLAGS += -I$(GRSISYS)/include -L$(GRSISYS)/libraries -fPIC -I $(GRSISYS)/include/
 
-#COMP_STRING="Now Compling "
+COMP_STRING="Now Compling "
 DICT_STRING="Now Making Dict for ${OBJ_COLOR}$< ${NO_COLOR}"
 
 CAT=cat
