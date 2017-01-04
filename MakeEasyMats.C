@@ -121,15 +121,15 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
   		opt = "dd";
   	
   	// useful for gamma gamma analysis	-- binning is large and gamma energy range is small
-		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,400,-1000,7000); 
+		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,400,-2000,6000); 
 		hexcgamgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
 		list[i]->Add(hexcgamgam[i]);				
 
-  	hexcgamthetatig[i] = new TH3S(Form("ExcGamTigressTheta_%s",opt),"",180,0,180,2000,0,4000,800,-1000,7000);
+  	hexcgamthetatig[i] = new TH3S(Form("ExcGamTigressTheta_%s",opt),"",180,0,180,2000,0,4000,800,-2000,6000);
   	hexcgamthetatig[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
   	list[i]->Add(hexcgamthetatig[i]);    	
 
-  	hexcgamthetacm[i] = new TH3S(Form("ExcGamThetaCm_%s",opt),"",180,0,180,2000,0,4000,800,-1000,7000);
+  	hexcgamthetacm[i] = new TH3S(Form("ExcGamThetaCm_%s",opt),"",180,0,180,2000,0,4000,800,-2000,6000);
   	hexcgamthetacm[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Cm For '%s'; #theta_{CM} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
   	list[i]->Add(hexcgamthetacm[i]);  	
   	
@@ -137,11 +137,11 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
   	hgamthetatig[i]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",opt));
   	list[i]->Add(hgamthetatig[i]);     	
 
-		hexcthetacm[i] = new TH2F(Form("ExcThetaCm_%s",opt),"",180,0,180,800,-1000,7000);
+		hexcthetacm[i] = new TH2F(Form("ExcThetaCm_%s",opt),"",180,0,180,800,-2000,6000);
 		hexcthetacm[i]->SetTitle(Form("Excitation Energy vs. Theta Cm '%s'; #theta_{CM} [#circ]; E_{exc} [keV]",opt));	  		
   	list[i]->Add(hexcthetacm[i]);	  	
 
-		hexcgam[i] = new TH2F(Form("ExcGam_%s",opt),"",2000,0,4000,800,-1000,7000);
+		hexcgam[i] = new TH2F(Form("ExcGam_%s",opt),"",2000,0,4000,800,-2000,6000);
 		hexcgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{exc} [keV]",opt));	  		
   	list[i]->Add(hexcgam[i]);	
 		
@@ -149,7 +149,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 		hgamgam[i]->SetTitle(Form("Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",opt));	  		
   	list[i]->Add(hgamgam[i]);
   	
-		hexc[i] = new TH1D(Form("Exc_%s",opt),"",800,-1000,7000);
+		hexc[i] = new TH1D(Form("Exc_%s",opt),"",800,-2000,6000);
 		hexc[i]->SetTitle(Form("Excitation Energy '%s'; E_{exc} [keV];",opt));	  		
   	list[i]->Add(hexc[i]);
   	  	
@@ -174,11 +174,11 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 			printf(" Making empty histograms .. %4.1f%%\r",(double)(imax*i+j)/(3*imax)*100.0);	
 			fflush(stdout);
 			
-			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,400,-1000,7000); 
+			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,400,-2000,6000); 
 			hexcgamgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));
 			list_sec[i][j]->Add(hexcgamgam_sec[i][j]);	
 			
-      hexcgamthetatig_sec[i][j] = new TH3S(Form("ExcGamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000,800,-1000,7000);
+      hexcgamthetatig_sec[i][j] = new TH3S(Form("ExcGamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000,800,-2000,6000);
       hexcgamthetatig_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta [%s] For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));
       list_sec[i][j]->Add(hexcgamthetatig_sec[i][j]); 				
 
@@ -186,7 +186,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
       hgamthetatig_sec[i][j]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For [%s] '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",sec,opt));
       list_sec[i][j]->Add(hgamthetatig_sec[i][j]);    
       			
-			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,800,-1000,7000);
+			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,800,-2000,6000);
 			hexcgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));	  		
 			list_sec[i][j]->Add(hexcgam_sec[i][j]);	
 		
@@ -194,7 +194,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 			hgamgam_sec[i][j]->SetTitle(Form("Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",sec,opt));	  		
 			list_sec[i][j]->Add(hgamgam_sec[i][j]);
 		
-			hexc_sec[i][j] = new TH1D(Form("Exc%s_%s",sec,opt),"",800,-1000,7000);
+			hexc_sec[i][j] = new TH1D(Form("Exc%s_%s",sec,opt),"",800,-2000,6000);
 			hexc_sec[i][j]->SetTitle(Form("Excitation Energy [%s] '%s'; E_{exc} [keV];",sec,opt));	  		
 			list_sec[i][j]->Add(hexc_sec[i][j]);
 				
@@ -210,16 +210,16 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
     if(low_res) // no need to build secondary histograms
       continue;
       
-		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",opt),"",800,-1000,7000);
+		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",opt),"",800,-2000,6000);
 		hexcg[i]->SetTitle(Form("Excitation Energy '%s' [with all gammas]; E_{exc} [keV];",opt));	  		
   	list[i]->Add(hexcg[i]);	   		   	
   	
-  	hexcgamthetalab[i] = new TH3S(Form("ExcGamThetaLab_%s",opt),"",180,0,180,2000,0,4000,800,-1000,7000);
+  	hexcgamthetalab[i] = new TH3S(Form("ExcGamThetaLab_%s",opt),"",180,0,180,2000,0,4000,800,-2000,6000);
   	hexcgamthetalab[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Lab For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
   	list[i]->Add(hexcgamthetalab[i]);	 	
   			
 		// secondary hists to check everything is working
-  	hexcthetatheta[i] = new TH3S(Form("ExcThetaLabThetaCm_%s",opt),"",180,0,180,180,0,180,800,-1000,7000);
+  	hexcthetatheta[i] = new TH3S(Form("ExcThetaLabThetaCm_%s",opt),"",180,0,180,180,0,180,800,-2000,6000);
   	hexcthetatheta[i]->SetTitle(Form("Theta Lab vs. Theta Cm vs. Excitation energy For '%s'; #theta_{CM} [#circ]; #theta_{LAB} [#circ]; E_{exc} [keV]",opt));
 		list[i]->Add(hexcthetatheta[i]);  
 
