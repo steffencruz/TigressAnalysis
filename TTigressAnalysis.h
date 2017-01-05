@@ -64,7 +64,7 @@ class TTigressAnalysis 	{
 		static Bool_t Init();
 		static void Print(Option_t * = "");			
 		static void Clear(Option_t * = "");		
-		static Bool_t LoadHistos(const char *fname, const char *reac="dp");
+		static Bool_t LoadHistos(const char *fname, const char *reac="dp", const char *detsel="all");
 		
 		static void SetGamBinSz(Int_t wid) { gambinsz = wid; }
 		static void SetExcBinSz(Int_t wid) { excbinsz = wid; }

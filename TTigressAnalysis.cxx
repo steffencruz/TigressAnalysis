@@ -147,7 +147,7 @@ void TTigressAnalysis::Clear(Option_t *opt) {
 	
 }
 
-Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac){
+Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac, const char *detsel){
 	
 	if(strcmp(fname,histfile.c_str())!=0 || strcmp(reac,reaction.c_str())!=0){
 		
@@ -224,8 +224,8 @@ Bool_t TTigressAnalysis::LoadHistos(const char *fname, const char *reac){
     }
     
     // by default the histograms cover all of SHARC  [not a specific range]
-    if(!DetectorSelector("all")||!hexcthcmgam)
-      return false;
+    if(!DetectorSelector(detsel)||!hexcthcmgam)
+      return false;  
      
     reaction.assign(reac);  
       			  		      
@@ -310,7 +310,7 @@ TH1D *TTigressAnalysis::Gam(Double_t exc_lo, Double_t exc_hi){
   if(exc_lo>=0.0 && exc_hi>exc_lo){ // set exc energy gate if included
 		Double_t gatesz;
   // produce an excitation energy (Y axis) gated gamma spectrum  			
-		h = (TH1D*)TH2Proj(hexcgam,'x',exc_lo,exc_hi,gatesz); 
+		h = (TH1D*)TH2Proj(heg,'x',exc_lo,exc_hi,gatesz); 
 		TAxis *yax = heg->GetYaxis();
   	Int_t yp[2] = {yax->FindBin(exc_lo), yax->FindBin(exc_hi)};
 		exc_lo = yax->GetBinCenter(yp[0]);

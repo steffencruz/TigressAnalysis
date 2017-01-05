@@ -22,7 +22,9 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
   Double_t targ = 5.0; //target thickness
   Double_t pos[] = {0.0,0.0,-1.0};
 	std::string badstripsname = "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/SharcAnalysis/BadStrips_sr94.txt";	
-	Double_t tmin = 200.0, tmax = 300.0; // large time window
+	Double_t tmin = 230.0, tmax = 260.0; // large time window
+	Double_t maxchgdiff = 150; // dcharge-dchargeb < 150
+	Double_t excmin=-2000, excmax=6000;
 	Double_t thmin = 0; // option to use only largest angle data : disabled    
   /*
   Int_t A = 95; // beam mass number
@@ -30,7 +32,9 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
   Double_t targ = 4.5; //target thickness
   Double_t pos[] = {0.0,0.0,0.0};
 	std::string badstripsname = "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/SharcAnalysis/BadStrips.txt";	  
-	Double_t tmin = 230.0, tmax = 265.0; // large time window
+	Double_t tmin = 230.0, tmax = 265.0; // large time window -> tmin=215 && tmax=270!!
+	Double_t excmin=-1000, excmax=7000;	
+	Double_t maxchgdiff = 1000;	
 	Double_t thmin = 0; // option to use only largest angle data : disabled  
   */
   
@@ -55,7 +59,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 
 	// set tree branch addresses
 	UInt_t det=0,front=0,back=0,type=0,addsize=0;
-	Double_t thetalab=0,thetacm=0,phicorr=0,denergy=0,ekin=0,exc=0,phase=0;
+	Double_t thetalab=0,thetacm=0,phicorr=0,denergy=0,dcharge=0,dchargeb=0,ekin=0,exc=0,phase=0;
 	Double_t tadd[10], eadd[10], thetadd[10];	
 	
 	chain->SetBranchAddress("det",&det);
@@ -69,6 +73,9 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 	chain->SetBranchAddress("thetacm",&thetacm);
 
 	chain->SetBranchAddress("denergy",&denergy);
+	chain->SetBranchAddress("dcharge",&dcharge);
+	chain->SetBranchAddress("dchargeb",&dchargeb);
+
 	chain->SetBranchAddress("ekin",&ekin);
 	chain->SetBranchAddress("exc",&exc);
 
@@ -121,15 +128,15 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
   		opt = "dd";
   	
   	// useful for gamma gamma analysis	-- binning is large and gamma energy range is small
-		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,400,-2000,6000); 
+		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,400,excmin,excmax); 
 		hexcgamgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
 		list[i]->Add(hexcgamgam[i]);				
 
-  	hexcgamthetatig[i] = new TH3S(Form("ExcGamTigressTheta_%s",opt),"",180,0,180,2000,0,4000,800,-2000,6000);
+  	hexcgamthetatig[i] = new TH3S(Form("ExcGamTigressTheta_%s",opt),"",180,0,180,2000,0,4000,800,excmin,excmax);
   	hexcgamthetatig[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
   	list[i]->Add(hexcgamthetatig[i]);    	
 
-  	hexcgamthetacm[i] = new TH3S(Form("ExcGamThetaCm_%s",opt),"",180,0,180,2000,0,4000,800,-2000,6000);
+  	hexcgamthetacm[i] = new TH3S(Form("ExcGamThetaCm_%s",opt),"",180,0,180,2000,0,4000,800,excmin,excmax);
   	hexcgamthetacm[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Cm For '%s'; #theta_{CM} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
   	list[i]->Add(hexcgamthetacm[i]);  	
   	
@@ -137,11 +144,11 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
   	hgamthetatig[i]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",opt));
   	list[i]->Add(hgamthetatig[i]);     	
 
-		hexcthetacm[i] = new TH2F(Form("ExcThetaCm_%s",opt),"",180,0,180,800,-2000,6000);
+		hexcthetacm[i] = new TH2F(Form("ExcThetaCm_%s",opt),"",180,0,180,800,excmin,excmax);
 		hexcthetacm[i]->SetTitle(Form("Excitation Energy vs. Theta Cm '%s'; #theta_{CM} [#circ]; E_{exc} [keV]",opt));	  		
   	list[i]->Add(hexcthetacm[i]);	  	
 
-		hexcgam[i] = new TH2F(Form("ExcGam_%s",opt),"",2000,0,4000,800,-2000,6000);
+		hexcgam[i] = new TH2F(Form("ExcGam_%s",opt),"",2000,0,4000,800,excmin,excmax);
 		hexcgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{exc} [keV]",opt));	  		
   	list[i]->Add(hexcgam[i]);	
 		
@@ -149,7 +156,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 		hgamgam[i]->SetTitle(Form("Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",opt));	  		
   	list[i]->Add(hgamgam[i]);
   	
-		hexc[i] = new TH1D(Form("Exc_%s",opt),"",800,-2000,6000);
+		hexc[i] = new TH1D(Form("Exc_%s",opt),"",800,excmin,excmax);
 		hexc[i]->SetTitle(Form("Excitation Energy '%s'; E_{exc} [keV];",opt));	  		
   	list[i]->Add(hexc[i]);
   	  	
@@ -174,11 +181,11 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 			printf(" Making empty histograms .. %4.1f%%\r",(double)(imax*i+j)/(3*imax)*100.0);	
 			fflush(stdout);
 			
-			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,400,-2000,6000); 
+			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,400,excmin,excmax); 
 			hexcgamgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));
 			list_sec[i][j]->Add(hexcgamgam_sec[i][j]);	
 			
-      hexcgamthetatig_sec[i][j] = new TH3S(Form("ExcGamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000,800,-2000,6000);
+      hexcgamthetatig_sec[i][j] = new TH3S(Form("ExcGamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000,800,excmin,excmax);
       hexcgamthetatig_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta [%s] For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));
       list_sec[i][j]->Add(hexcgamthetatig_sec[i][j]); 				
 
@@ -186,7 +193,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
       hgamthetatig_sec[i][j]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For [%s] '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",sec,opt));
       list_sec[i][j]->Add(hgamthetatig_sec[i][j]);    
       			
-			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,800,-2000,6000);
+			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,800,excmin,excmax);
 			hexcgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));	  		
 			list_sec[i][j]->Add(hexcgam_sec[i][j]);	
 		
@@ -194,7 +201,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
 			hgamgam_sec[i][j]->SetTitle(Form("Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",sec,opt));	  		
 			list_sec[i][j]->Add(hgamgam_sec[i][j]);
 		
-			hexc_sec[i][j] = new TH1D(Form("Exc%s_%s",sec,opt),"",800,-2000,6000);
+			hexc_sec[i][j] = new TH1D(Form("Exc%s_%s",sec,opt),"",800,excmin,excmax);
 			hexc_sec[i][j]->SetTitle(Form("Excitation Energy [%s] '%s'; E_{exc} [keV];",sec,opt));	  		
 			list_sec[i][j]->Add(hexc_sec[i][j]);
 				
@@ -210,16 +217,16 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
     if(low_res) // no need to build secondary histograms
       continue;
       
-		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",opt),"",800,-2000,6000);
+		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",opt),"",800,excmin,excmax);
 		hexcg[i]->SetTitle(Form("Excitation Energy '%s' [with all gammas]; E_{exc} [keV];",opt));	  		
   	list[i]->Add(hexcg[i]);	   		   	
   	
-  	hexcgamthetalab[i] = new TH3S(Form("ExcGamThetaLab_%s",opt),"",180,0,180,2000,0,4000,800,-2000,6000);
+  	hexcgamthetalab[i] = new TH3S(Form("ExcGamThetaLab_%s",opt),"",180,0,180,2000,0,4000,800,excmin,excmax);
   	hexcgamthetalab[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Lab For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
   	list[i]->Add(hexcgamthetalab[i]);	 	
   			
 		// secondary hists to check everything is working
-  	hexcthetatheta[i] = new TH3S(Form("ExcThetaLabThetaCm_%s",opt),"",180,0,180,180,0,180,800,-2000,6000);
+  	hexcthetatheta[i] = new TH3S(Form("ExcThetaLabThetaCm_%s",opt),"",180,0,180,180,0,180,800,excmin,excmax);
   	hexcthetatheta[i]->SetTitle(Form("Theta Lab vs. Theta Cm vs. Excitation energy For '%s'; #theta_{CM} [#circ]; #theta_{LAB} [#circ]; E_{exc} [keV]",opt));
 		list[i]->Add(hexcthetatheta[i]);  
 
@@ -311,7 +318,7 @@ Int_t MakeEasyMats(std::string treename = "$DATADIR/redwood_Sr95_*", std::string
     // r[type]->SetExc(excr*1e3);
     // exc = excr;    
 	
-		if(exc>7000)
+		if(exc<excmin || exc>excmax)
 			continue;		
     // now set excitation energy to get angular conversions and stuff right
     r[type]->SetExc(exc*1e-3);
