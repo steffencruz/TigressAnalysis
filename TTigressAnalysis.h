@@ -46,9 +46,8 @@
 // _____ Known Bugs _____
 // * Background subtraction must include a region both above and below the peak 
 // Intensities in calculated spectra may be incorrect.  
-// States which decay through multiple cascades are adding the same transitions multiple 
-// times, once for each cascade, which results in an overestimation of final intensity.
-//      -  FIXED [16th Nov 2016]
+// * If a cascade begins with only 1 transition which later branches out the first transition
+// will be ncascades too strong because it will use strength==1 every time.
 //
 //    Made by Steffen Cruz [2016]
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -114,7 +113,7 @@ class TTigressAnalysis 	{
 											Double_t emin, Double_t emax, 
 											Double_t bg0=0.0, Double_t bg1=0.0, 
 											Double_t bg2=0.0, Double_t bg3=0.0,
-											Bool_t bg_only=false,Bool_t quad_fit=false);
+											Bool_t bg_only=false, UInt_t order=1);
 													
 		static void FitPeakExcludeRange(TH1 *hist, 
 											Double_t emin, Double_t emax, 
@@ -125,7 +124,16 @@ class TTigressAnalysis 	{
 											Double_t emin, Double_t emax, 
 											Double_t bg0, Double_t bg1, 
 											Double_t bg2, Double_t bg3,
-											Bool_t quad_fit=false);												
+											UInt_t order=1);		
+											
+    static TList *FitTigThetaSlices(Double_t egam, 
+                      Double_t emin=0.0, Double_t emax=0.0, 
+											Double_t bg0=0.0, Double_t bg1=0.0, 
+											Double_t bg2=0.0, Double_t bg3=0.0,
+											Double_t exmin=-1.0, Double_t exmax=-1.0,
+                      Bool_t bg_only=false, Bool_t quad_fit=false,
+                      int rebx=1, int reby=1);
+																					
 
 		static void SetBackgroundLims(Double_t emin, Double_t emax, 
 								  		Double_t &bg0, Double_t &bg1, 
@@ -163,7 +171,7 @@ class TTigressAnalysis 	{
 											Double_t bg2=0.0, Double_t bg3=0.0,		
 											Double_t exmin=-1.0, Double_t exmax=-1.0);
 											
-		static TH2F *GamAngCorrMat(Double_t exmin=-1.0, Double_t exmax=-1.0);				
+		static TH2F *GamVsTigTheta(Double_t exmin=-1.0, Double_t exmax=-1.0);				
 		
     static TH1D *GetHitPattern(Int_t detmin=5, Int_t detmax=16, Int_t crymin=0, Int_t crymax=3, Int_t segmin=0, Int_t segmax=7);
 
@@ -236,10 +244,13 @@ class TTigressAnalysis 	{
 	  static TH1D *DrawGammas(Int_t from_state, Double_t egam=0.0);
 		static TH1D *DrawGammasGated(Double_t exmin=-1.0, Double_t exmax=-1.0, Double_t egam=-1.0);
     static TH2F *DrawExcGam(Double_t egam=-1.0, Bool_t use_int=false);	
+
+	  static TH1D *MakeRealistic(int from_state, Double_t egam=0.0, Int_t color=1);
 	  static TH1D *MakeRealistic(TH1D *hgam, Bool_t abseff = false);
 				
 		static TH1D *DrawIntensitites(){ return hint; }				
 		static Double_t BranchingRatio(Double_t state_eng, Double_t egam);			
+	
 	private:
 	
 		static Int_t GetStateIndex(Double_t val, bool add_element=false);

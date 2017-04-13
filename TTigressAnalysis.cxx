@@ -97,8 +97,9 @@ Bool_t TTigressAnalysis::Init(){
 //  gStyle->SetOptStat(0);
 //  gStyle->SetTitleOffset(1.5,"Y");
   SetEfficiencyCurve();
-      
-	LoadHistos(Form("%s/Results_RedwoodMats.root",TIGDIR),"dp"); // read histograms	
+
+	LoadHistos(Form("%s/Results_Sr95_Sections.root",TIGDIR),"dp"); // read histograms	      
+//	LoadHistos(Form("%s/Results_RedwoodMats.root",TIGDIR),"dp"); // read histograms	
 	return InitLevelsGammas(100,false); // load nndc stuff
 }
 
@@ -307,7 +308,7 @@ TH1D *TTigressAnalysis::Gam(Double_t exc_lo, Double_t exc_hi){
 	}
 		
   TH1D *h;
-  if(exc_lo>=0.0 && exc_hi>exc_lo){ // set exc energy gate if included
+  if(exc_hi>exc_lo){ // set exc energy gate if included
 		Double_t gatesz;
   // produce an excitation energy (Y axis) gated gamma spectrum  			
 		h = (TH1D*)TH2Proj(heg,'x',exc_lo,exc_hi,gatesz); 
@@ -315,17 +316,18 @@ TH1D *TTigressAnalysis::Gam(Double_t exc_lo, Double_t exc_hi){
   	Int_t yp[2] = {yax->FindBin(exc_lo), yax->FindBin(exc_hi)};
 		exc_lo = yax->GetBinCenter(yp[0]);
 		exc_hi = yax->GetBinCenter(yp[1]);
-  	printf("\n Gam:  Excitation energy range : %.2f-%.2f keV [ bins %i - %i ]\n",exc_lo,exc_hi,yp[0],yp[1]);
+  	printf("\n Gam:  Excitation energy range : %.0f-%.0f keV [ bins %i - %i ]\n",exc_lo,exc_hi,yp[0],yp[1]);
 		
-  	h->SetTitle(Form("Gamma Singles Gated on Excitation Energy Range %.1f - %.1f keV",exc_lo,exc_hi));
-  } else 
+  	h->SetTitle(Form("#gamma-Rays Gated on Excitation Energy Range %.0f-%.0f keV",exc_lo,exc_hi));
+  } else{
   	h = (TH1D*)hg->Clone("GammaEnergy");
-
+  	h->SetTitle("#gamma-Rays Gated on all Transfer Protons");  
+  }
   Double_t reb = gambinsz/h->GetBinWidth(1);
   if(reb>1)
 	  h->Rebin((Int_t)reb);	
 
-  h->SetNameTitle("GammaEnergy",Form("%s; E_{#gamma} [keV]; Counts / %.1f keV",h->GetTitle(),h->GetBinWidth(0)));	
+  h->SetNameTitle("GammaEnergy",Form("%s; E_{#gamma} [keV]; Counts / %.0f keV",h->GetTitle(),h->GetBinWidth(0)));	
 
 	return h;	
 }
@@ -368,7 +370,10 @@ TH1D *TTigressAnalysis::GamGated(Double_t emin, Double_t emax, Double_t bg0, Dou
   if(reb>1)
 	  h->Rebin((Int_t)reb);
 	  
-  h->SetNameTitle("GatedGammaEnergy",Form("Gammma Energy Coincident With Gated Gam %sEnergy; E_{#gamma} [keV]; Counts / %.1f keV",exc_hi>0?"& Exc ":"",h->GetBinWidth(0)));
+	std::string excstr;
+	if(exc_lo<exc_hi && exc_hi>0)
+	  excstr = Form("and Excitation Energy Range %.0f-%.0f keV",exc_lo,exc_hi);
+  h->SetNameTitle("GatedGammaEnergy",Form("#gamma-Rays Coincident With %.0f-%0.f keV #gamma-Ray Gate %s; E_{#gamma} [keV]; Counts / %.0f keV",emin,emax,excstr.c_str(),h->GetBinWidth(1)));
       
 	return h;
 }	
@@ -403,11 +408,10 @@ TH2F *TTigressAnalysis::GamGam(Double_t exc_lo, Double_t exc_hi){
   if(reb>1)
 	  h2->Rebin((Int_t)reb);	
 */
-  h2->SetNameTitle("GammaGamma",Form("%s; E_{#gamma} [keV]; E_{#gamma} [keV]; Counts / %.1f keV",h2->GetTitle(),h2->GetYaxis()->GetBinWidth(1)));	
+  h2->SetNameTitle("GammaGamma",Form("%s; E_{#gamma} [keV]; E_{#gamma} [keV]; Counts / %.0f keV",h2->GetTitle(),h2->GetYaxis()->GetBinWidth(1)));	
 
 	return h2;	
 }
-
 
 TH1D *TTigressAnalysis::ExcGated(Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
 
@@ -445,9 +449,9 @@ TH1D *TTigressAnalysis::ExcGated(Double_t emin, Double_t emax, Double_t bg0, Dou
 	  h->Rebin(reb);
 	  
   if(!emin && !emax)	  
-    h->SetNameTitle("ExcEnergy",Form("Excitation Energy; E_{exc} [keV]; Counts / %.1f keV",excbinsz));
+    h->SetNameTitle("ExcEnergy",Form("Excitation Energy; E_{exc} [keV]; Counts / %.0f keV",excbinsz));
   else
-    h->SetNameTitle("GatedExcEnergy",Form("Excitation Energy Coincident With Gated Gamma Energy; E_{exc} [keV]; Counts / %.1f keV",excbinsz));
+    h->SetNameTitle("GatedExcEnergy",Form("Excitation Energy Coincident With %.0f-%0.f #gamma-Ray Gate; E_{exc} [keV]; Counts / %.0f keV",emin,emax,excbinsz));
 
 	return h;
 }
@@ -458,8 +462,9 @@ TH2F *TTigressAnalysis::ExcThetaGated(Double_t emin, Double_t emax, Double_t bg0
 		printf("\n\t Error :  No file has been loaded! \n\n");
 		return 0;
 	}
-	
-	TH2F *hp[4], *het;
+
+	std::string gamstr;	
+	TH2F *hp[4], *het;	
 	if(emin>=0 && emax>emin){
 		
 		SetBackgroundLims(emin,emax,bg0,bg1,bg2,bg3);	
@@ -480,6 +485,7 @@ TH2F *TTigressAnalysis::ExcThetaGated(Double_t emin, Double_t emax, Double_t bg0
   
 		// peak - bgtot
 		het = TH2Sum(hp[0],hp[3],1,-0.5);
+	  gamstr = Form("Coincident With %.0f-%0.f #gamma-Ray Gate",emin,emax);		
   } else{
   	Double_t tmpsz;
   	het = TH3Proj(hexcthcmgam,"zx",0,4000.0,tmpsz);	 
@@ -490,7 +496,7 @@ TH2F *TTigressAnalysis::ExcThetaGated(Double_t emin, Double_t emax, Double_t bg0
 	  het->RebinY(reb); 	
 
 	het->SetMinimum(0);  
-  het->SetNameTitle("GatedExcVsThetaCm",Form("Excitation Energy Versus Theta Cm; #theta_{CM} [#circ]; E_{exc} [keV]"));
+  het->SetNameTitle("GatedExcVsThetaCm",Form("Excitation Energy Versus #theta_{CM} %s; #theta_{CM} [#circ]; E_{exc} [keV]",gamstr.c_str()));
 
 	return het;
 }
@@ -719,7 +725,7 @@ TCanvas *TTigressAnalysis::AnalyzeGammas(Double_t emin, Double_t emax, Double_t 
 
 TH1D *TTigressAnalysis::GamAngCorr(Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Double_t exc_lo, Double_t exc_hi){
 
-	TH2F *h2 = GamAngCorrMat(exc_lo,exc_hi);
+	TH2F *h2 = GamVsTigTheta(exc_lo,exc_hi);
 	if(!h2)
 		return 0;
 	
@@ -767,7 +773,7 @@ TH1D *TTigressAnalysis::GamAngCorr(Double_t emin, Double_t emax, Double_t bg0, D
 	return ht;	
 }
 
-TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
+TH2F *TTigressAnalysis::GamVsTigTheta(Double_t exc_lo, Double_t exc_hi){
 
 	if(!histfile.size()){
 		printf("\n\t Error :  No file has been loaded! \n\n");
@@ -787,7 +793,7 @@ TH2F *TTigressAnalysis::GamAngCorrMat(Double_t exc_lo, Double_t exc_hi){
   	Int_t zp[2] = {zax->FindBin(exc_lo), zax->FindBin(exc_hi)};
 		exc_lo = zax->GetBinCenter(zp[0]);
 		exc_hi = zax->GetBinCenter(zp[1]);
-  	printf("\n GamAngCorrMat:  Excitation energy range : %.2f-%.2f keV [ bins %i - %i ]\n",exc_lo,exc_hi,zp[0],zp[1]);
+  	printf("\n GamVsTigTheta:  Excitation energy range : %.2f-%.2f keV [ bins %i - %i ]\n",exc_lo,exc_hi,zp[0],zp[1]);
 		
   	h2->SetTitle(Form("Gammas Versus Tigress Theta Gated on Excitation Energy Range %.1f - %.1f keV",exc_lo,exc_hi));
   } else {
@@ -866,7 +872,6 @@ TH1D *TTigressAnalysis::NormalizeThetaHits(TH1D *htheta, Int_t segval){
   return h;
 }
 
-
 void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){ 
 
 	Double_t gBgConstant, gBgSlope, gContent, gMean, gSigma, gBinW, gChi2pNDF;
@@ -907,7 +912,7 @@ void TTigressAnalysis::FitPeakExcludeRange(TH1 *hist, Double_t emin, Double_t em
 
 }
 
-void TTigressAnalysis::FitBgExcludeRange(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Bool_t quad_fit){ 
+void TTigressAnalysis::FitBgExcludeRange(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, UInt_t order){ 
 
 	TF1 *fitfunc = new TF1("pol_bg_exc",pol_bg_exc, bg0, bg3, 7);
 	fitfunc->SetLineColor(2);
@@ -918,7 +923,8 @@ void TTigressAnalysis::FitBgExcludeRange(TH1 *hist, Double_t emin, Double_t emax
 	fitfunc->SetParName(0,"BgConstant"); 
 	fitfunc->SetParName(1,"BgSlope");
 	fitfunc->SetParName(2,"BgQuad");
-	if(!quad_fit) fitfunc->FixParameter(2,0.0);
+	if(order<2) fitfunc->FixParameter(2,0.0);
+	if(order<1) fitfunc->FixParameter(1,0.0);
 	
 	fitfunc->SetParName(3,"ExcludeLo Min "); fitfunc->FixParameter(3,bg1);
 	fitfunc->SetParName(4,"ExcludeLo Max "); fitfunc->FixParameter(4,emin);
@@ -928,8 +934,7 @@ void TTigressAnalysis::FitBgExcludeRange(TH1 *hist, Double_t emin, Double_t emax
 	hist->Fit(fitfunc,"QR","SAME");
 }
 
-
-Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Bool_t bg_only, Bool_t quad_fit){
+Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Bool_t bg_only, UInt_t order){
 
   if(!hist)
     return 0;
@@ -945,13 +950,13 @@ Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax,
   
   // selected peak and background region boxes
   TBox *bp = new TBox(emax,hist->GetMaximum()*.01,emin,hist->GetMaximum()*1.05);
-  bp->SetFillColor(3);
+  bp->SetFillColorAlpha(3,0.5);
   bp->SetFillStyle(3002); 
   TBox *b1 = new TBox(bg0,hist->GetMaximum()*.01,bg1,hist->GetMaximum()*1.05);
-  b1->SetFillColor(2);
+  b1->SetFillColorAlpha(2,0.5);
   b1->SetFillStyle(3002);
   TBox *b2 = new TBox(bg2,hist->GetMaximum()*.01,bg3,hist->GetMaximum()*1.05);
-  b2->SetFillColor(2);
+  b2->SetFillColorAlpha(2,0.5);
   b2->SetFillStyle(3002);   
     
   bp->Draw();
@@ -976,7 +981,8 @@ Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax,
     cnterr = func->GetParError(2)/bin;  
 
     printf("\n\n ____ peak+lbg fit :- ___");  
-    printf("\n\n -> cnt = %.1f +/- %.1f\n\n",counts,cnterr);  
+    printf("\n\n -> cnt     = %.1f +/- %.1f",counts,cnterr);  
+    printf("\n -> chi2/n  = %.3f\n",func->GetChisquare()/func->GetNDF());  
     for(int fn=0; fn<5; fn++){
       bstat->AddText(Form("%10s : %6.4f +/- %6.4f",func->GetParName(fn),func->GetParameter(fn),func->GetParError(fn)));
       printf("\n Par %i.  %10s : %6.4f +/- %6.4f",fn,func->GetParName(fn),func->GetParameter(fn),func->GetParError(fn));  
@@ -984,7 +990,7 @@ Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax,
   } else {
     Double_t tot, tot_err, bg, bg_err;  
     
-    FitBgExcludeRange(hist,emin,emax,bg0,bg1,bg2,bg3,quad_fit);    
+    FitBgExcludeRange(hist,emin,emax,bg0,bg1,bg2,bg3,order);    
     
     func = hist->GetFunction("pol_bg_exc");  
     tot = hist->IntegralAndError(xax->FindBin(emin),xax->FindBin(emax),tot_err);
@@ -994,14 +1000,13 @@ Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax,
     counts = tot - bg;
     cnterr = sqrt(pow(tot_err/tot,2.0)+pow(bg_err/bg,2.0))*counts;   
     
-    printf("\n\n ____ bg pol%i fit :- ___",quad_fit?2:1);
-    printf("\n\n -> tot = %.1f +/- %.1f",tot,tot_err);
-    printf("\n -> bg  = %.1f +/- %.1f",bg,bg_err);    
-    printf("\n -> cnt = %.1f +/- %.1f\n",counts,cnterr);   
-    
-    Int_t fnmax = 2;
-    if(quad_fit)
-      fnmax=3;    
+    printf("\n\n ____ bg pol%i fit :- ___",order);
+    printf("\n\n -> tot     = %.1f +/- %.1f",tot,tot_err);
+    printf("\n -> bg      = %.1f +/- %.1f",bg,bg_err);    
+    printf("\n -> cnt     = %.1f +/- %.1f",counts,cnterr);   
+    printf("\n -> chi2/n  = %.3f\n",func->GetChisquare()/func->GetNDF());  
+        
+    Int_t fnmax = 3;  
     for(int fn=0; fn<fnmax; fn++){
       bstat->AddText(Form("%10s : %6.4f +/- %6.4f",func->GetParName(fn),func->GetParameter(fn),func->GetParError(fn)));
       printf("\n Par %i.  %10s : %6.4f +/- %6.4f",fn,func->GetParName(fn),func->GetParameter(fn),func->GetParError(fn));  
@@ -1021,7 +1026,9 @@ Double_t TTigressAnalysis::FitPeakStats(TH1 *hist, Double_t emin, Double_t emax,
 // Normalizes theory curve to data in region emin-emax so that observed peaks can be compared to theory
 // ** emin and emax etc are for the normalization, not the gamma gate **
 TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
-
+  
+  if(fTigSigma)
+    SetResolutionCurve();
   TCanvas *c;
   if(!hdata){
     c = new TCanvas;
@@ -1134,6 +1141,168 @@ Double_t TTigressAnalysis::GetPopulationStrength(TH1D *hist, Double_t exc, Doubl
   return strength;
 }
 
+TList *TTigressAnalysis::FitTigThetaSlices(Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Double_t exc_lo, Double_t exc_hi, Bool_t bg_only, Bool_t quad_fit, int rebx, int reby){
+
+  TList *list = new TList;
+  
+  if(!emin && !emax)
+    SetPeakLims(egam,emin,emax);
+  if(!emin && !emax)
+    return list;
+  
+  TH2F *h2 = GamVsTigTheta(exc_lo,exc_hi);
+  if(!h2)
+    return list;
+  
+  h2->RebinX(rebx);      
+  h2->RebinY(reby);        
+  list->Add(h2);
+  
+  Double_t therr = h2->GetXaxis()->GetBinWidth(1)/2;  
+
+  TGraphErrors *gcnts = new TGraphErrors();
+  gcnts->SetNameTitle(Form("FitCounts_Egam%.0f",egam),"Counts Vs. #theta_{TIG}; #theta_{TIG} [#circ]; Peak Counts ;");
+  gcnts->SetMarkerColor(kBlack);
+  gcnts->SetLineColor(kBlack); 
+  list->Add(gcnts);
+
+  TGraphErrors *gcnts_rng = new TGraphErrors();
+  gcnts_rng->SetNameTitle(Form("FitRngCounts_Egam%.0f",egam),"Peak-To-Total Counts In Peak Range Vs. #theta_{TIG}; #theta_{TIG} [#circ]; Peak-To-Total Counts In Peak Range;");
+  gcnts_rng->SetMarkerColor(kBlack);
+  gcnts_rng->SetLineColor(kBlack); 
+  list->Add(gcnts_rng);  
+  
+  TGraphErrors *gcnts_p2t = new TGraphErrors();
+  gcnts_p2t->SetNameTitle(Form("FitP2tCounts_Egam%.0f",egam),"Peak-To-Total Counts Vs. #theta_{TIG}; #theta_{TIG} [#circ]; Peak-To-Total Counts;");
+  gcnts_p2t->SetMarkerColor(kBlack);
+  gcnts_p2t->SetLineColor(kBlack); 
+  list->Add(gcnts_p2t);    
+  
+  TGraphErrors *gmean = new TGraphErrors();
+  gmean->SetNameTitle(Form("FitCentroid_Egam%.0f",egam),"Centroid Vs. #theta_{TIG}; #theta_{TIG} [#circ]; Peak Centroid [keV];");
+  gmean->SetMarkerColor(kRed);
+  gmean->SetLineColor(kRed); 
+  list->Add(gmean);
+
+  TGraphErrors *gfwhm = new TGraphErrors();
+  gfwhm->SetNameTitle(Form("FitFWHM_Egam%.0f",egam),"FWHM Vs. #theta_{TIG}; #theta_{TIG} [#circ]; Peak FWHM [keV];");
+  gfwhm->SetMarkerColor(kBlue);
+  gfwhm->SetLineColor(kBlue); 
+  list->Add(gfwhm);    
+
+  TGraph *gchi2 = new TGraph();
+  gchi2->SetNameTitle(Form("FitChi2_Egam%.0f",egam),"Goodness-of-Fit; #theta_{TIG} [#circ]; #chi^{2}/N;");
+  gchi2->SetMarkerColor(8);
+  gchi2->SetLineColor(8); 
+  list->Add(gchi2);    
+
+  TH1D *htmp = h2->ProjectionX();
+  TH1D *h1;
+  list->Add(htmp);
+  
+  Double_t theta, cnts_tot, cnts_rng;
+  Double_t cnts_peak, cerr_peak, mean_peak, merr_peak, fwhm_peak, ferr_peak, chi2_peak;  
+  Double_t d2r = TMath::DegToRad(), mincnt = 30; // minimum total counts in a spectrum range bg0-bg3
+  TF1 *func;
+  UInt_t binlo=htmp->FindFirstBinAbove(mincnt), binhi=htmp->FindLastBinAbove(mincnt);
+  Int_t n=-1;
+    
+  // loop over theta slices and fit the gamma peak for each slice
+  for(int i=binlo; i<=binhi; i++){
+    
+    theta = h2->GetXaxis()->GetBinCenter(i);
+    h1 = h2->ProjectionY(Form("Gam_Theta%i",i),i,i);
+    // root can't fit without proper bin errors. Sumw2 doesn't seem to be setting this right
+    for(int j=1; j<=h1->GetNbinsX(); j++)
+      h1->SetBinError(j,sqrt(h1->GetBinContent(j)));
+      
+    h1->SetTitle(Form("Gamma Spectrum For #theta_{TIG} = %.1f#circ; E_{#gamma} [keV]; Counts / %.0f keV",theta,h1->GetBinWidth(1)));
+
+    cnts_tot = h1->Integral();
+    if(cnts_tot==0)
+      continue;
+    if(cnts_tot<mincnt){
+      printf("\n%i\t Histogram did not have enough counts.. %.0f [< %.0f]",i,cnts_tot,mincnt);
+      continue;
+    }
+    
+    cnts_rng  = h1->Integral(h1->GetXaxis()->FindBin(emin),h1->GetXaxis()->FindBin(emax));    
+   
+    if(verbose) printf("\n\n%.1f \t Total counts = %.0f and %.0f counts in range [%.0f - %.0f]..\n",theta,cnts_tot,cnts_rng,emin,emax);
+    
+    cnts_peak = FitPeakStats(h1,emin,emax,bg0,bg1,bg2,bg3,bg_only,quad_fit);  
+        
+    if(!bg_only)
+      func = h1->GetFunction("gauss_linbg_exc");
+    else
+      func = h1->GetFunction("pol_bg_exc");
+
+    if(!func){
+      printf("\n%.1f \t Function was not found.\n\n",theta);
+      continue;
+    }
+    
+    list->Add(h1);    
+    
+    cerr_peak = sqrt(cnts_rng);
+    n++;    
+    
+    gcnts->SetPoint(n,theta,cnts_peak);
+    gcnts->SetPointError(n,therr,cerr_peak);   
+    
+    gcnts_rng->SetPoint(n,theta,cnts_peak/cnts_rng);
+    gcnts_rng->SetPointError(n,therr,cerr_peak/cnts_rng);   
+    
+    gcnts_p2t->SetPoint(n,theta,cnts_peak/cnts_tot);
+    gcnts_p2t->SetPointError(n,therr,cerr_peak/cnts_tot);           
+    
+    chi2_peak = func->GetChisquare()/func->GetNDF();    
+    gchi2->SetPoint(n,theta,chi2_peak);         
+     
+    if(bg_only)
+      continue; // we don't have access to any other variables if we only fit bg    
+    
+    mean_peak = func->GetParameter(3);
+    merr_peak = func->GetParError(3);
+    fwhm_peak = 2.355*func->GetParameter(4);
+    ferr_peak = 2.355*func->GetParError(4);
+    
+    gmean->SetPoint(n,theta,mean_peak);
+    gmean->SetPointError(n,therr,merr_peak);  
+    
+    gfwhm->SetPoint(n,theta,fwhm_peak);
+    gfwhm->SetPointError(n,therr,ferr_peak); 
+         
+  }
+  
+  TCanvas *c = new TCanvas(Form("FitSummary_Egam%.0f",egam),Form("FitSummary_Egam%.0f",egam),1200,800);
+  c->Divide(3,2);
+  
+  c->cd(1);  gcnts->Draw("AP");
+  c->cd(2);  gcnts_rng->Draw("AP");
+  c->cd(3);  gcnts_p2t->Draw("AP");
+  c->cd(4);  gmean->Draw("AP");
+  c->cd(5);  gfwhm->Draw("AP");
+  c->cd(6);  gchi2->Draw("AL");      
+  list->Add(c);
+  
+  TCanvas *c2 = new TCanvas(Form("FittedSlices_Egam%.0f",egam),Form("FittedSlices_Egam%.0f",egam),1200,800);
+  c2->Divide(5,5);  
+  n=0;
+  for(int i=binlo; i<=binhi; i++){
+    h1 = (TH1D*)list->FindObject(Form("Gam_Theta%i",i));
+    if(!h1)
+      continue;
+    n++;
+    c2->cd(n);      
+    h1->Draw("e1");
+  }
+  list->Add(c2); 
+  
+  printf("\n\n COMPLETE \n\n");
+  return list;  
+}
+
 TList *TTigressAnalysis::CheckDopplerCorrection(Double_t egam, TH2F *h2, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
 
   TList *list = new TList;
@@ -1142,7 +1311,7 @@ TList *TTigressAnalysis::CheckDopplerCorrection(Double_t egam, TH2F *h2, Double_
     SetPeakLims(egam,emin,emax);
   
   if(!h2)
-    h2 = GamAngCorrMat(0,5000);
+    h2 = GamVsTigTheta(0,5000);
   if(!h2)
     return list;
         
@@ -1174,7 +1343,7 @@ TList *TTigressAnalysis::CheckDopplerCorrection(Double_t egam, TH2F *h2, Double_
   list->Add(htmp);
   
   Double_t theta, peak_mean, peak_err, cnts, cnts_rng;
-  Double_t beta = 0.0953, raw_eng, raw_eng_err; // for improving doppler
+  Double_t beta = 0.105, raw_eng, raw_eng_err; // for improving doppler
   Double_t d2r = TMath::DegToRad();
   TF1 *func;// = new TF1("gauss_linbg_exc","pol1(0)+gaus(2)",bg0,bg3);
   Double_t mincnt = 30; // minimum total counts in a spectrum range bg0-bg3
@@ -1283,8 +1452,8 @@ TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engab
     absmsg = "Absolute ";
     addmsg = "Addback ";
   } else {
-    absmsg = " ";
-    addmsg = " ";    
+    absmsg = "";
+    addmsg = "";    
   }
   printf("\n\n Setting %s%sEfficiency Curve :\n",absmsg,addmsg);
     
@@ -1292,6 +1461,8 @@ TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engab
   gTigEff->SetNameTitle("EffData",Form("TIGRESS %s%sEfficiency Curve; E_{#gamma} [keV]; %s%sEfficiency [%%]",absmsg,addmsg,absmsg,addmsg));
 
   std::ifstream infile(efname);
+  if(!infile.is_open()) 
+    infile.open(Form("%s/%s",TIGDIR,efname));
   Double_t eng, eff, err;
   while(infile.good()){
     infile >> eng >> eff >> err;
@@ -1325,7 +1496,7 @@ TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engab
     chi2 += pow(yy[i]-fTigEff->Eval(xx[i]),2.0)/ye[i];
   // if(verbose) printf("\n\n\n \tChi2 = %f, Chi2/NDF = %f\n\n",chi2,chi2/(gTigEff->GetN()-1));   
   
-  TCanvas *canvas = new TCanvas("EfficiencyCurve","EfficiencyCurve",800,500); 
+  TCanvas *canvas = new TCanvas("EfficiencyCurve","EfficiencyCurve",800,600); 
   canvas->SetGrid();
   gTigEff->Draw("AP");  
   
@@ -1339,10 +1510,13 @@ TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engab
   Double_t conf = fTigEff->GetParError(0);
   flo->SetParameter(0,fTigEff->GetParameter(0)-conf);
   fup->SetParameter(0,fTigEff->GetParameter(0)+conf);  
+  fTigEffLow = flo;
+  fTigEffUp  = fup;
 //  printf("\n\tval = %f +/- %f\n\n",fTigEff->GetParameter(0),conf);
   
-  if(engabs<=0 || abseff<=0 || abserr<0)
+  if(engabs<=0 || abseff<=0 || abserr<0){
     return canvas;
+  }
     
   // get the scaling factor for the fit to reproduce the required point
   Double_t abscale = abseff/fTigEff->Eval(engabs);
@@ -1437,23 +1611,18 @@ Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
 
 void TTigressAnalysis::SetResolutionCurve(){
   /*
+  // NEW 95Sr 2014 VALS  
   TGraphErrors *g = new TGraphErrors();
   g->SetNameTitle("TigressResolutionGraph","TIGRESS Resolution; E_#gamma [keV]; #sigma [keV]");
-  g->SetPoint(g->GetN(),414 ,	3.369	); g->SetPointError(g->GetN()-1,10.0, 0.106);
-  g->SetPoint(g->GetN(),815	, 5.235	); g->SetPointError(g->GetN()-1,10.0, 0.043);
-  g->SetPoint(g->GetN(),978	, 5.911	); g->SetPointError(g->GetN()-1,10.0, 0.177);
-  g->SetPoint(g->GetN(),1035, 5.849	); g->SetPointError(g->GetN()-1,10.0, 0.238);
-  g->SetPoint(g->GetN(),1180,	6.618	); g->SetPointError(g->GetN()-1,10.0, 0.440);
-  g->SetPoint(g->GetN(),1305,	6.706	); g->SetPointError(g->GetN()-1,10.0, 0.387);
-  g->SetPoint(g->GetN(),1400,	6.784	); g->SetPointError(g->GetN()-1,10.0, 0.902);
-  g->SetPoint(g->GetN(),1500,	7.992	); g->SetPointError(g->GetN()-1,10.0, 1.194);
-  g->SetPoint(g->GetN(),1762,	10.741); g->SetPointError(g->GetN()-1,10.0,	1.303);
-  g->SetPoint(g->GetN(),2084,	11.473); g->SetPointError(g->GetN()-1,10.0,	0.611);
-  g->SetPoint(g->GetN(),3500,	19.641); g->SetPointError(g->GetN()-1,10.0,	2.348);
+  g->SetPoint(g->GetN(),414 ,	3.2	); g->SetPointError(g->GetN()-1,1.0,0.15);
+  g->SetPoint(g->GetN(),815	, 4.7	); g->SetPointError(g->GetN()-1,0.05,0.05);
+  g->SetPoint(g->GetN(),1180,	6.3	); g->SetPointError(g->GetN()-1,0.5,0.5);
+  g->SetPoint(g->GetN(),2084,	12);   g->SetPointError(g->GetN()-1,1.0,1.0);
+  g->SetPoint(g->GetN(),3500,	16);   g->SetPointError(g->GetN()-1,3.2,3.0);
   */
 	// with appropriate peak widths we can identify multiple adjacent peaks	
 	fTigSigma = new TF1("func_sig","[0]+[1]*TMath::Power(x,[2])",0,4000); // power law?
-	fTigSigma->SetParameters(-4.74,0.679,0.409); // from fitting singles data	
+	fTigSigma->SetParameters(2.0,5.20859e-04, 1.27376); // from fitting singles data	
 	fTigSigma->SetNpx(4000);
 	fTigSigma->SetTitle("TIGRESS Resolution Curve; E_{#gamma} [keV]; #sigma [keV]");
 
@@ -1631,6 +1800,10 @@ Bool_t TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 	ClearVars();
 	
 	std::ifstream infile(fname.c_str());	
+	if(!infile.is_open()){ // try looking in this directory for it
+	  fname = Form("%s/%s",TIGDIR,fname.c_str());
+	  infile.open(fname.c_str());
+  }
 	if(!infile.is_open()){
 		printf("\nFAILED TO OPEN FILE :  %s\n\n",fname.c_str());
 		return false;
@@ -2001,6 +2174,10 @@ void TTigressAnalysis::WriteIntensities(const char *fname){
 
 TH1D *TTigressAnalysis::DrawGammas(Int_t from_state, Double_t egam){
 	
+	if(from_state>energies.size()){
+		printf("\n State ' %i ' out of range [max = %lu].\n",from_state,energies.size());	
+	  return 0;
+  }
 	const char *name = Form("GammaSpectrum_State%i%s",from_state,egam>0?Form("_GamGate%.1f",egam):"");
 	TH1D *hgcalc = (TH1D*)list->FindObject(name);
 	if(hgcalc){
@@ -2024,8 +2201,8 @@ TH1D *TTigressAnalysis::DrawGammas(Int_t from_state, Double_t egam){
 	
 	std::vector<int> indx = GetCascadeIndex(from_state,egam);
 	Int_t ncas = indx.size(), j=0, initial, final;
-	Double_t gam, strength, intensity, scale;
-		
+	Double_t gam, strength, intensity, scale, nbranches;
+			
 	GetRid("tmp");
 	TH1D *htmpi, *htmpf, *htmpg = new TH1D("tmp","",4000.0,0,4000.0);
 	
@@ -2033,6 +2210,7 @@ TH1D *TTigressAnalysis::DrawGammas(Int_t from_state, Double_t egam){
 
 		j	= indx.at(k);
 		intensity = 1.0;
+		intensity /= htrans->GetBinContent(cascades[j].at(0),cascades[j].at(1));
 		if(verbose) printf("\n Drawing Cascade %2i :-",k+1);
 		for(int i=0; i<(Int_t)cascades[j].size()-1; i++){
 
@@ -2050,9 +2228,16 @@ TH1D *TTigressAnalysis::DrawGammas(Int_t from_state, Double_t egam){
 			strength /= htmpi->Integral(1,initial);
 			
 			// the transition strength is shared equally between each cascade
-			htmpf = htrans->ProjectionY("transtmpf",final,final);				
-			if(htmpf->GetEntries())
-			  strength /= htmpf->GetEntries(); // reduce the strength of a specific cascade
+			htmpf = htrans->ProjectionY("transtmpf",final,final);		
+			nbranches = 0.;
+			for(int i=1; i<final; i++)
+			  if(htmpf->GetBinContent(i)>0)
+			    nbranches+=1.0;
+			// we want to make sure that the sum of all branches from a state are 1.    
+			if(nbranches>1.0)  
+        strength /= nbranches;
+	//		if(htmpf->GetEntries())
+	//		  strength /= htmpf->GetEntries(); // reduce the strength of a specific cascade
 			
 			intensity*=strength;
 			if(verbose) printf(" Gam. Eng. = %4.1f\tInt. = %5.4f \t Tot. Int. = %5.4f",gam,strength,intensity);
@@ -2555,8 +2740,65 @@ void TTigressAnalysis::DrawTransitions(int from_state, Bool_t engaxis){
 	return;
 }
 
+TH1D *TTigressAnalysis::MakeRealistic(int from_state, Double_t egam, Int_t color){
+
+  if(!energies.size()){
+    verbose = false;
+    LoadLevelsGammas();
+  }  
+  
+   if(!fTigEff){
+    printf("\n\n Warning : Efficiency has been set to default values.\n");
+    SetEfficiencyCurve();
+  } 
+
+  if(!fTigSigma){
+    printf("\n\n Warning : Energy resolution has been set to default values.\n");
+    SetResolutionCurve();
+  }  
+  
+  TH1D *hgcalc = DrawGammas(from_state,egam);
+  if(!hgcalc)
+    return hgcalc;
+  
+	// converts delta function spectrum into sigma(E) and efficiency corrected spectrum
+	GetRid(Form("%s_Realistic",hgcalc->GetName()));
+	TH1D *htmp = new TH1D(Form("%s_Realistic",hgcalc->GetName()),hgcalc->GetTitle(),hgcalc->GetNbinsX(),0,4000);		
+	htmp->GetXaxis()->SetTitle(hgcalc->GetXaxis()->GetTitle());
+	htmp->GetYaxis()->SetTitle(hgcalc->GetYaxis()->GetTitle());
+	htmp->SetLineColor(color);	
+	
+	Double_t x, val, sig, eff;
+	TF1 *func = new TF1("gauspeak","gaus",0,4000);
+	func->SetNpx(4000);
+		
+	// integrate the counts under the data peaks 
+	for(int i=1; i<hgcalc->GetNbinsX(); i++){
+		
+		val = hgcalc->GetBinContent(i);
+		if(!val)
+			continue;
+		
+		// define a gaussian centered at bin center with sigma = sig and integral = hcalc->GetBinContent(i)		
+		x = hgcalc->GetBinCenter(i);
+		sig = fTigSigma->Eval(x);
+		eff = Efficiency(x);		
+		
+		func->SetParameters(eff*val/(sqrt(2*3.14159)*sig),x,sig);
+		// now get this histogram and use it as a filter over the data
+		htmp->Add((TH1D*)func->GetHistogram());
+	}
+	
+	return htmp;
+}
+
 TH1D *TTigressAnalysis::MakeRealistic(TH1D *hgcalc, Bool_t abseff){
 
+  if(!fTigSigma){
+    printf("\n\n Error : Energy resolution must be set first.\n\n");
+    return 0;  
+  }
+  
 	// converts delta function spectrum into sigma(E) and efficiency corrected spectrum
 	GetRid(Form("%s_Realistic",hgcalc->GetName()));
 	TH1D *htmp = new TH1D(Form("%s_Realistic",hgcalc->GetName()),hgcalc->GetTitle(),hgcalc->GetNbinsX(),0,4000);		
