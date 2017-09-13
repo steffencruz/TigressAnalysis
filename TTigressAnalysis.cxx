@@ -1611,14 +1611,17 @@ Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
 
 void TTigressAnalysis::SetResolutionCurve(){
   /*
-  // NEW 95Sr 2014 VALS  
-  TGraphErrors *g = new TGraphErrors();
-  g->SetNameTitle("TigressResolutionGraph","TIGRESS Resolution; E_#gamma [keV]; #sigma [keV]");
-  g->SetPoint(g->GetN(),414 ,	3.2	); g->SetPointError(g->GetN()-1,1.0,0.15);
-  g->SetPoint(g->GetN(),815	, 4.7	); g->SetPointError(g->GetN()-1,0.05,0.05);
-  g->SetPoint(g->GetN(),1180,	6.3	); g->SetPointError(g->GetN()-1,0.5,0.5);
-  g->SetPoint(g->GetN(),2084,	12);   g->SetPointError(g->GetN()-1,1.0,1.0);
-  g->SetPoint(g->GetN(),3500,	16);   g->SetPointError(g->GetN()-1,3.2,3.0);
+  TGraphErrors *ge = new TGraphErrors();
+  ge->SetTitle("TIGRESS Energy Resolution; E_{#gamma} [keV]; Peak #sigma [keV]");
+  ge->SetPoint(0, 414, 3.0072);   ge->SetPointError(0,0.1,0.1015);
+  ge->SetPoint(1, 815, 4.9906);   ge->SetPointError(1,0.1,0.0241);
+  ge->SetPoint(2, 978, 5.8657);   ge->SetPointError(2,0.1,0.1641);
+  ge->SetPoint(3, 1180, 6.6331);  ge->SetPointError(3,0.1,0.3641);
+  ge->SetPoint(4, 1302, 7.2329);  ge->SetPointError(4,0.1,0.2537);
+  ge->SetPoint(5, 1402, 8.3560);  ge->SetPointError(5,0.1,0.6247);
+  ge->SetPoint(6, 1761, 9.6981);  ge->SetPointError(6,0.1,0.7873);
+  ge->SetPoint(7, 2084, 12.0752); ge->SetPointError(7,0.1,0.8267);
+  ge->SetPoint(8, 3500, 17.2920); ge->SetPointError(8,10,2.1338);  
   */
 	// with appropriate peak widths we can identify multiple adjacent peaks	
 	fTigSigma = new TF1("func_sig","[0]+[1]*TMath::Power(x,[2])",0,4000); // power law?

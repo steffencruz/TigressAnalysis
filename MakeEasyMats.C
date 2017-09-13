@@ -16,6 +16,14 @@
 #include"TReaction.h"
 #include"TTigress.h"
 
+/*
+  ____MakeEasyMats____
+  Prepares multi-dimensional histograms for TTigressAnalysis
+  - A reaction can be selected using eg "dp" or "dp+pp+dt" or "dp dt"
+  - If one reaction is selected, it is possible to make sectional (DB UB UQ) histograms
+  - If more than one reaction is selected, sectional histograms cannot be made
+*/
+
 Double_t CalculateDoppler(Double_t eng, UInt_t tigdet, UInt_t tigcry, UInt_t tigseg, TVector3 pos_offs, Double_t rbeta){
 
   TVector3 segpos = TTigress::GetPosition(tigdet,tigcry,tigseg);
@@ -25,7 +33,7 @@ Double_t CalculateDoppler(Double_t eng, UInt_t tigdet, UInt_t tigcry, UInt_t tig
   return doppler;
 }
 
-Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", std::string outfilename = "", Bool_t all_types=false, Bool_t low_res=false){
+Bool_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", std::string outfilename = "", std::string reac="dp+dt", Bool_t low_res=false){
   
   Double_t beame; // beam enegry in middle of target
   Double_t targ;//target thickness
@@ -58,18 +66,40 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 	TChain *chain = new TChain("EasyTree");
   chain->Add(treename.c_str());		
   printf("\n* Loaded:	%i trees *\n",chain->GetNtrees());
-  
+	
+  static const unsigned long npos = std::string::npos;	
+  std::vector<std::string> opt(5);
+  UInt_t nreac=0;
 	TReaction *r[5];	
-	r[0] = new TReaction(Form("sr%i",A),"d","p",Form("sr%i",A+1),beame,0,true);  	
-	printf("\n**  Made Reaction: %s\n",r[0]->GetNameFull());	
-  r[1] = new TReaction(Form("sr%i",A),"p","p",Form("sr%i",A),beame,0,true); 
-  printf("\n**  Made Reaction: %s\n",r[1]->GetNameFull());
-  r[2] = new TReaction(Form("sr%i",A),"d","d",Form("sr%i",A),beame,0,true); 
-  printf("\n**  Made Reaction: %s\n",r[2]->GetNameFull());
-  r[3] = new TReaction(Form("sr%i",A),"c12","c12",Form("sr%i",A),beame,0,true); 
-  printf("\n**  Made Reaction: %s\n\n",r[3]->GetNameFull());
-  r[4] = new TReaction(Form("sr%i",A),"d","t",Form("sr%i",A-1),beame,0,true); 
-  printf("\n**  Made Reaction: %s\n\n",r[4]->GetNameFull());
+	if(reac.find("dp")!=npos){
+    r[0] = new TReaction(Form("sr%i",A),"d","p",Form("sr%i",A+1),beame,0,true);  	
+    printf("\n**  Made Reaction: %s\n",r[0]->GetNameFull());	
+    opt.at(0).assign("dp"); nreac++;
+  }
+  if(reac.find("pp")!=npos){
+    r[1] = new TReaction(Form("sr%i",A),"p","p",Form("sr%i",A),beame,0,true); 
+    printf("\n**  Made Reaction: %s\n",r[1]->GetNameFull());
+    opt.at(1).assign("pp"); nreac++;
+  }
+  if(reac.find("dd")!=npos){
+    r[2] = new TReaction(Form("sr%i",A),"d","d",Form("sr%i",A),beame,0,true); 
+    printf("\n**  Made Reaction: %s\n",r[2]->GetNameFull());
+    opt.at(2).assign("dd"); nreac++;
+  }
+  if(reac.find("cc")!=npos){
+    r[3] = new TReaction(Form("sr%i",A),"c12","c12",Form("sr%i",A),beame,0,true); 
+    printf("\n**  Made Reaction: %s\n\n",r[3]->GetNameFull());
+    opt.at(3).assign("cc"); nreac++;
+  }
+  if(reac.find("dt")!=npos){
+    r[4] = new TReaction(Form("sr%i",A),"d","t",Form("sr%i",A-1),beame,0,true); 
+    printf("\n**  Made Reaction: %s\n\n",r[4]->GetNameFull());
+    opt.at(4).assign("dt"); nreac++;
+  }  
+  if(!nreac){
+    printf("\n\n Error :  No reactions have been selected. Try ""dp+dt""\n\n");
+    return false;
+  }
   
 	TSharcAnalysis::SetTarget(pos[0],pos[1],pos[2],targ,"cd2",0.5,0.5,0.5);
 	TList *acclist = TSharcAnalysis::GetAcceptanceList(r[0],badstripsname.c_str());
@@ -78,7 +108,7 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 
 	// set tree branch addresses
 	UInt_t det=0,front=0,back=0,type=0,addsize=0;
-	Double_t thetalab=0,thetacm=0,phicorr=0,denergy=0,dcharge=0,dchargeb=0;
+	Double_t thetalab=0,thetacm=0,phicorr=0,denergy=0,dcharge=0,dchargeb=0,penergy=0;
 	Double_t ekin=0,exc=0,phase=0,rbeta=0;
 	Double_t tadd[10], eadd[10], thetadd[10], tigeng[10];
   UShort_t tigdet[10], tigcry[10], tigseg[10];
@@ -96,6 +126,7 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 	chain->SetBranchAddress("denergy",&denergy);
 	chain->SetBranchAddress("dcharge",&dcharge);
 	chain->SetBranchAddress("dchargeb",&dchargeb);
+	chain->SetBranchAddress("penergy",&penergy);	
 
 	chain->SetBranchAddress("ekin",&ekin);
 	chain->SetBranchAddress("exc",&exc);
@@ -112,92 +143,84 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 	chain->SetBranchAddress("tigseg",&tigseg);
 
 	// for different reactions
-	TList *list[3];	 // list for each reaction, list[0]="dp", list[1]="pp", list[2]="dd"		
+	TList *list[5];	 // list for each reaction, list[0]="dp", list[1]="pp", list[2]="dd", list[3]="cc", list[4]="dt"		
 	
-  TH3S *hexcgamgam[3], *hexcgamthetacm[3], *hexcgamthetalab[3], *hexcgamthetatig[3], *hexcthetatheta[3], *hphasetaddeadd[3];//, *hexcgamthetacm2[3], *hexcgamthetalab2[3];
-  TH2F *hgamgam[3], *hexcgam[3], *hexcthetacm[3], *hgamthetatig[3], *hphasetadd[3], *htaddtadd[3];
-	TH1D *hgam[3], *hexc[3], *hexcg[3];
+  TH3S *hexcgamgam[5], *hexcgamthetacm[5], *hexcgamthetalab[5];
+  TH3S *hexcgamthetatig[5], *hexcthetatheta[5], *hphasetaddeadd[5];//, *hexcgamthetacm2[3], *hexcgamthetalab2[3];
+  TH2F *hgamgam[5], *hexcgam[5], *hexcthetacm[5];
+  TH2F *hgamthetatig[5], *hphasetadd[5], *htaddtadd[5];
+	TH1D *hgam[5], *hexc[5], *hexcg[5];
 	
 	Bool_t no_sec=false;	
-	if(all_types)
+	if(nreac>1)
 	  low_res=true;
 	if(low_res){
 	  printf("\n\n Sectional histograms [dbox,ubox,uqqq] will not be made.\n\n");
 	  no_sec=true; // don't make sectional matrices	  
 	}
 	// for different sharc sections
-	TList *list_sec[3][3];	 // list for each reaction and SHARC section combination		
-	
-	TH3S *hexcgamgam_sec[3][3], *hexcgamthetatig_sec[3][3];	
-	TH2F *hexcgam_sec[3][3], *hgamgam_sec[3][3], *hgamthetatig_sec[3][3], *hphasetadd_sec[3][3];
-	TH1D *hexc_sec[3][3], *hgam_sec[3][3];
+	TList *list_sec[3];	 // list for each reaction and SHARC section combination		
+	TH3S *hexcgamgam_sec[3], *hexcgamthetatig_sec[3];	
+	TH2F *hexcgam_sec[3], *hgamgam_sec[3], *hgamthetatig_sec[3], *hphasetadd_sec[3];
+	TH1D *hexc_sec[3], *hgam_sec[3];
 	
   TH2F *hkin = new TH2F("KinVsThetaLab",Form("Kinematics For ^{%i}Sr; #theta_{LAB} [#circ]; Energy [keV]",A),720,0,180,3000,0,30000);
   TH2F *hdengcm = new TH2F("DelVsThetaCm","ElasticKinematicsCm; #theta_{CM} [#circ]; Delta Energy [keV]",720,0,180,1000,0,10000);    
     
 	printf("\n\n Making empty histograms .. %4.1f%%\r",0.0);	
   fflush(stdout);  
-  const char *opt, *sec;
   
-  int imax = 3;
-  if(!all_types) // limit this to dp 
-    imax=1;
-  
-  for(int i=0; i<imax; i++){
+  for(int i=0; i<5; i++){
   	
-  	list[i] = new TList;
-  
-  	if(i==0)
-  		opt = "dp";
-  	if(i==1)
-  		opt = "pp";	
-  	if(i==2)
-  		opt = "dd";
+  	if(opt.at(i).length()<2)
+  	  continue;
+  	list[i] = new TList;	
+  	const char *rname = opt.at(i).c_str();
   	
   	// useful for gamma gamma analysis	-- binning is large and gamma energy range is small
-		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",opt),"",1000,0,4000,1000,0,4000,500,excmin,excmax); 
-		hexcgamgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
+		hexcgamgam[i] = new TH3S(Form("ExcGamGam_%s",rname),"",1000,0,4000,1000,0,4000,500,excmin,excmax); 
+		hexcgamgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",rname));
 		list[i]->Add(hexcgamgam[i]);				
 
-  	hexcgamthetatig[i] = new TH3S(Form("ExcGamTigressTheta_%s",opt),"",180,0,180,2000,0,4000,1000,excmin,excmax);
-  	hexcgamthetatig[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
+  	hexcgamthetatig[i] = new TH3S(Form("ExcGamTigressTheta_%s",rname),"",180,0,180,2000,0,4000,1000,excmin,excmax);
+  	hexcgamthetatig[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",rname));
   	list[i]->Add(hexcgamthetatig[i]);    	
 
-  	hexcgamthetacm[i] = new TH3S(Form("ExcGamThetaCm_%s",opt),"",180,0,180,2000,0,4000,1000,excmin,excmax);
-  	hexcgamthetacm[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Cm For '%s'; #theta_{CM} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
+  	hexcgamthetacm[i] = new TH3S(Form("ExcGamThetaCm_%s",rname),"",180,0,180,2000,0,4000,1000,excmin,excmax);
+  	hexcgamthetacm[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Cm For '%s'; #theta_{CM} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",rname));
   	list[i]->Add(hexcgamthetacm[i]);  	
   	
-  	hgamthetatig[i] = new TH2F(Form("GamTigressTheta_%s",opt),"",180,0,180,2000,0,4000);
-  	hgamthetatig[i]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",opt));
+  	hgamthetatig[i] = new TH2F(Form("GamTigressTheta_%s",rname),"",180,0,180,4000,0,4000);
+  	hgamthetatig[i]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",rname));
   	list[i]->Add(hgamthetatig[i]);     	
 
-		hexcthetacm[i] = new TH2F(Form("ExcThetaCm_%s",opt),"",180,0,180,1000,excmin,excmax);
-		hexcthetacm[i]->SetTitle(Form("Excitation Energy vs. Theta Cm '%s'; #theta_{CM} [#circ]; E_{exc} [keV]",opt));	  		
+		hexcthetacm[i] = new TH2F(Form("ExcThetaCm_%s",rname),"",180,0,180,1000,excmin,excmax);
+		hexcthetacm[i]->SetTitle(Form("Excitation Energy vs. Theta Cm '%s'; #theta_{CM} [#circ]; E_{exc} [keV]",rname));	  		
   	list[i]->Add(hexcthetacm[i]);	  	
 
-		hexcgam[i] = new TH2F(Form("ExcGam_%s",opt),"",2000,0,4000,1000,excmin,excmax);
-		hexcgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{exc} [keV]",opt));	  		
+		hexcgam[i] = new TH2F(Form("ExcGam_%s",rname),"",4000,0,4000,1000,excmin,excmax);
+		hexcgam[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{exc} [keV]",rname));	  		
   	list[i]->Add(hexcgam[i]);	
 		
-		hgamgam[i] = new TH2F(Form("GamGam_%s",opt),"",2000,0,4000,2000,0,4000);
-		hgamgam[i]->SetTitle(Form("Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",opt));	  		
+		hgamgam[i] = new TH2F(Form("GamGam_%s",rname),"",4000,0,4000,4000,0,4000);
+		hgamgam[i]->SetTitle(Form("Gamma Energy vs. Gamma Energy '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",rname));	  		
   	list[i]->Add(hgamgam[i]);
   	
-		hexc[i] = new TH1D(Form("Exc_%s",opt),"",1000,excmin,excmax);
-		hexc[i]->SetTitle(Form("Excitation Energy '%s'; E_{exc} [keV];",opt));	  		
+		hexc[i] = new TH1D(Form("Exc_%s",rname),"",1000,excmin,excmax);
+		hexc[i]->SetTitle(Form("Excitation Energy '%s'; E_{exc} [keV];",rname));	  		
   	list[i]->Add(hexc[i]);
   	  	
-		hgam[i] = new TH1D(Form("Gam_%s",opt),"",4000,0,4000);
-		hgam[i]->SetTitle(Form("Gamma Energy '%s'; E_{#gamma} [keV];",opt));	  		
+		hgam[i] = new TH1D(Form("Gam_%s",rname),"",4000,0,4000);
+		hgam[i]->SetTitle(Form("Gamma Energy '%s'; E_{#gamma} [keV];",rname));	  		
   	list[i]->Add(hgam[i]);	  	
 	
   	// sectional matrices for DBOX, UBOX & UQQQ [dp only]  	
-		for(int j=0; j<3; j++){
-		  if(i>0 || no_sec)
-		    break;
+		if(nreac==1){
+		  for(int j=0; j<3; j++){
 		
-      list_sec[i][j] = new TList;		
-		
+      list_sec[j] = new TList;		
+		  const char *sec;
+
 			if(j==0)
 				sec = "UQ";
 			if(j==1)
@@ -205,105 +228,101 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 			if(j==2)
 				sec = "DB";		
 				
-			printf(" Making empty histograms .. %4.1f%%\r",(double)(imax*i+j)/(3*imax)*100.0);	
+			printf(" Making empty histograms .. %4.1f%%\r",(double)j/3.0*100.0);	
 			fflush(stdout);
 			
-			hexcgamgam_sec[i][j] = new TH3S(Form("ExcGamGam%s_%s",sec,opt),"",1000,0,4000,1000,0,4000,500,excmin,excmax); 
-			hexcgamgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));
-			list_sec[i][j]->Add(hexcgamgam_sec[i][j]);	
+			hexcgamgam_sec[j] = new TH3S(Form("ExcGamGam%s_%s",sec,rname),"",1000,0,4000,1000,0,4000,500,excmin,excmax); 
+			hexcgamgam_sec[j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]; E_{exc} [keV]",sec,rname));
+			list_sec[j]->Add(hexcgamgam_sec[j]);	
 			
-      hexcgamthetatig_sec[i][j] = new TH3S(Form("ExcGamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000,1000,excmin,excmax);
-      hexcgamthetatig_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta [%s] For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));
-      list_sec[i][j]->Add(hexcgamthetatig_sec[i][j]); 				
+      hexcgamthetatig_sec[j] = new TH3S(Form("ExcGamTigressTheta%s_%s",sec,rname),"",180,0,180,2000,0,4000,1000,excmin,excmax);
+      hexcgamthetatig_sec[j]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. TIGRESS Theta [%s] For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",sec,rname));
+      list_sec[j]->Add(hexcgamthetatig_sec[j]); 				
 
-      hgamthetatig_sec[i][j] = new TH2F(Form("GamTigressTheta%s_%s",sec,opt),"",180,0,180,2000,0,4000);
-      hgamthetatig_sec[i][j]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For [%s] '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",sec,opt));
-      list_sec[i][j]->Add(hgamthetatig_sec[i][j]);    
+      hgamthetatig_sec[j] = new TH2F(Form("GamTigressTheta%s_%s",sec,rname),"",180,0,180,4000,0,4000);
+      hgamthetatig_sec[j]->SetTitle(Form("Gamma Energy vs. TIGRESS Theta For [%s] '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]",sec,rname));
+      list_sec[j]->Add(hgamthetatig_sec[j]);    
       			
-			hexcgam_sec[i][j] = new TH2F(Form("ExcGam%s_%s",sec,opt),"",2000,0,4000,1000,excmin,excmax);
-			hexcgam_sec[i][j]->SetTitle(Form("Excitation Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{exc} [keV]",sec,opt));	  		
-			list_sec[i][j]->Add(hexcgam_sec[i][j]);	
+			hexcgam_sec[j] = new TH2F(Form("ExcGam%s_%s",sec,rname),"",4000,0,4000,1000,excmin,excmax);
+			hexcgam_sec[j]->SetTitle(Form("Excitation Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{exc} [keV]",sec,rname));	  		
+			list_sec[j]->Add(hexcgam_sec[j]);	
 		
-			hgamgam_sec[i][j] = new TH2F(Form("GamGam%s_%s",sec,opt),"",2000,0,4000,2000,0,4000);
-			hgamgam_sec[i][j]->SetTitle(Form("Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",sec,opt));	  		
-			list_sec[i][j]->Add(hgamgam_sec[i][j]);
+			hgamgam_sec[j] = new TH2F(Form("GamGam%s_%s",sec,rname),"",4000,0,4000,4000,0,4000);
+			hgamgam_sec[j]->SetTitle(Form("Gamma Energy vs. Gamma Energy [%s] '%s'; E_{#gamma} [keV]; E_{#gamma} [keV]",sec,rname));	  		
+			list_sec[j]->Add(hgamgam_sec[j]);
 		
-			hexc_sec[i][j] = new TH1D(Form("Exc%s_%s",sec,opt),"",1000,excmin,excmax);
-			hexc_sec[i][j]->SetTitle(Form("Excitation Energy [%s] '%s'; E_{exc} [keV];",sec,opt));	  		
-			list_sec[i][j]->Add(hexc_sec[i][j]);
+			hexc_sec[j] = new TH1D(Form("Exc%s_%s",sec,rname),"",1000,excmin,excmax);
+			hexc_sec[j]->SetTitle(Form("Excitation Energy [%s] '%s'; E_{exc} [keV];",sec,rname));	  		
+			list_sec[j]->Add(hexc_sec[j]);
 				
-			hgam_sec[i][j] = new TH1D(Form("Gam%s_%s",sec,opt),"",4000,0,4000);
-			hgam_sec[i][j]->SetTitle(Form("Gamma Energy [%s] '%s'; E_{#gamma} [keV];",sec,opt));	  		
-			list_sec[i][j]->Add(hgam_sec[i][j]);	  	 		
+			hgam_sec[j] = new TH1D(Form("Gam%s_%s",sec,rname),"",4000,0,4000);
+			hgam_sec[j]->SetTitle(Form("Gamma Energy [%s] '%s'; E_{#gamma} [keV];",sec,rname));	  		
+			list_sec[j]->Add(hgam_sec[j]);	  	 		
 			
-      hphasetadd_sec[i][j] = new TH2F(Form("PhaseTAdd%s_%s",sec,opt),"",400,0,400,700,0,7);
-      hphasetadd_sec[i][j]->SetTitle(Form("Phase vs. TAdd [%s] For '%s'; TIGRESS time [ns]; RF Phase [ ~ SHARC time]",sec,opt));
-      list_sec[i][j]->Add(hphasetadd_sec[i][j]); 				
+      hphasetadd_sec[j] = new TH2F(Form("PhaseTAdd%s_%s",sec,rname),"",400,0,400,700,0,7);
+      hphasetadd_sec[j]->SetTitle(Form("Phase vs. TAdd [%s] For '%s'; TIGRESS time [ns]; RF Phase [ ~ SHARC time]",sec,rname));
+      list_sec[j]->Add(hphasetadd_sec[j]); 		
+      }		
   	}			
     
     if(low_res) // no need to build secondary histograms
       continue;
       
-		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",opt),"",1000,excmin,excmax);
-		hexcg[i]->SetTitle(Form("Excitation Energy '%s' [with all gammas]; E_{exc} [keV];",opt));	  		
+		hexcg[i] = new TH1D(Form("Exc_AllGam_%s",rname),"",1000,excmin,excmax);
+		hexcg[i]->SetTitle(Form("Excitation Energy '%s' [with all gammas]; E_{exc} [keV];",rname));	  		
   	list[i]->Add(hexcg[i]);	   		   	
   	
-  	hexcgamthetalab[i] = new TH3S(Form("ExcGamThetaLab_%s",opt),"",180,0,180,2000,0,4000,1000,excmin,excmax);
-  	hexcgamthetalab[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Lab For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",opt));
+  	hexcgamthetalab[i] = new TH3S(Form("ExcGamThetaLab_%s",rname),"",180,0,180,2000,0,4000,1000,excmin,excmax);
+  	hexcgamthetalab[i]->SetTitle(Form("Excitation Energy vs. Gamma Energy vs. Theta Lab For '%s'; #theta_{LAB} [#circ]; E_{#gamma} [keV]; E_{exc} [keV]",rname));
   	list[i]->Add(hexcgamthetalab[i]);	 	
   			
 		// secondary hists to check everything is working
-  	hexcthetatheta[i] = new TH3S(Form("ExcThetaLabThetaCm_%s",opt),"",180,0,180,180,0,180,1000,excmin,excmax);
-  	hexcthetatheta[i]->SetTitle(Form("Theta Lab vs. Theta Cm vs. Excitation energy For '%s'; #theta_{CM} [#circ]; #theta_{LAB} [#circ]; E_{exc} [keV]",opt));
+  	hexcthetatheta[i] = new TH3S(Form("ExcThetaLabThetaCm_%s",rname),"",180,0,180,180,0,180,1000,excmin,excmax);
+  	hexcthetatheta[i]->SetTitle(Form("Theta Lab vs. Theta Cm vs. Excitation energy For '%s'; #theta_{CM} [#circ]; #theta_{LAB} [#circ]; E_{exc} [keV]",rname));
 		list[i]->Add(hexcthetatheta[i]);  
 
-		hphasetadd[i] = new TH2F(Form("PhaseTAdd_%s",opt),"",400,0,400,700,0,7);
-		hphasetadd[i]->SetTitle(Form("Phase vs. TAdd For '%s'; TIGRESS time [ns]; RF Phase [ ~ SHARC time]",opt));
+		hphasetadd[i] = new TH2F(Form("PhaseTAdd_%s",rname),"",400,0,400,700,0,7);
+		hphasetadd[i]->SetTitle(Form("Phase vs. TAdd For '%s'; TIGRESS time [ns]; RF Phase [ ~ SHARC time]",rname));
 		list[i]->Add(hphasetadd[i]); 
 		
-		hphasetaddeadd[i] = new TH3S(Form("PhaseTAddEadd_%s",opt),"",400,0,400,700,0,7,1000,0,4000);
-		hphasetaddeadd[i]->SetTitle(Form("Phase vs. TAdd For '%s'; TIGRESS time [ns]; RF Phase [ ~ SHARC time]; E_{#gamma} [keV]",opt));
+		hphasetaddeadd[i] = new TH3S(Form("PhaseTAddEadd_%s",rname),"",400,0,400,700,0,7,1000,0,4000);
+		hphasetaddeadd[i]->SetTitle(Form("Phase vs. TAdd For '%s'; TIGRESS time [ns]; RF Phase [ ~ SHARC time]; E_{#gamma} [keV]",rname));
 		list[i]->Add(hphasetaddeadd[i]); 
 	
-		htaddtadd[i] = new TH2F(Form("TAddTAdd_%s",opt),"",400,0,400,400,0,400);
-		htaddtadd[i]->SetTitle(Form("TAdd vs. TAdd For '%s'; TIGRESS time [ns]; TIGRESS time [ns]",opt));
+		htaddtadd[i] = new TH2F(Form("TAddTAdd_%s",rname),"",400,0,400,400,0,400);
+		htaddtadd[i]->SetTitle(Form("TAdd vs. TAdd For '%s'; TIGRESS time [ns]; TIGRESS time [ns]",rname));
 		list[i]->Add(htaddtadd[i]);
 		
-		fflush(stdout);
-		
+		fflush(stdout);		
 	}
 	printf(" Making empty histograms .. %4.1f%%     -- COMPLETE \n\n",100.0);	
 	
 	printf("\n List of Histograms :-");
 	TObject *obj;
-	for(int i=0; i<imax; i++){
+	for(int i=0; i<5; i++){
 
-  	if(i==0)
-      printf("\n -> REACTION = ' DP '");
-  	if(i==1)
-      printf("\n -> REACTION = ' PP '");
-  	if(i==2)
-      printf("\n -> REACTION = ' DD '");
-	
+  	if(opt.at(i).length()<2)
+  	  continue;
+    printf("\n -> REACTION = ' %s '",opt.at(i).c_str());
 	  TIter iter(list[i]);
 	  while((obj = iter.Next()))
 	    printf("\n\t%s*    %s",obj->ClassName(),obj->GetName());
 
-		for(int j=0; j<3; j++){
-		  if(i>0 || no_sec)
-		    break;
+    if(nreac==1){
+      for(int j=0; j<3; j++){
 
-			if(j==0)
-        printf("\n\t -> SECTION = ' UQ '");
-			if(j==1)
-        printf("\n\t -> SECTION = ' UB '");
-			if(j==2)
-        printf("\n\t -> SECTION = ' DB '");
-				      
-      TIter iter2(list_sec[i][j]);
-      while((obj = iter2.Next()))
-        printf("\n\t\t%s*    %s",obj->ClassName(),obj->GetName());	
-    }    
+        if(j==0)
+          printf("\n\t -> SECTION = ' UQ '");
+        if(j==1)
+          printf("\n\t -> SECTION = ' UB '");
+        if(j==2)
+          printf("\n\t -> SECTION = ' DB '");
+              
+        TIter iter2(list_sec[j]);
+        while((obj = iter2.Next()))
+          printf("\n\t\t%s*    %s",obj->ClassName(),obj->GetName());	
+      }    
+    }
   }
 			
   printf("\n\n Using the following control parameters:-");
@@ -315,8 +334,8 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 	Int_t nentries=chain->GetEntries(), sec_indx;	
 	Double_t excr;
   double d2r = 0.017453;
-  double r2d = 57.2958;
-	
+  double r2d = 57.2958;			
+  UInt_t ncount[5];
 
 	for(int n=0; n<nentries; n++){
 	
@@ -327,8 +346,8 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 			fflush(stdout);
 		}
 		
-		if(type>2) 
-		  continue; // we don't want carbon or triton  	
+  	if(opt.at(type).length()<2)
+  	  continue;		// if 'type' was not included in specified reactions, continue
 		
 		// fill hist excluding dead strips and other options
 		if(TSharcAnalysis::BadStrip(det,front,-1) || TSharcAnalysis::BadStrip(det,-1,back))
@@ -344,10 +363,11 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 		    hdengcm->Fill(thetacm,denergy);
 		//    printf("\n %i type == %i thetalab = %.1f   thetacm = %.1f  180-2*thetalab = %.1f",n,type,thetalab,thetacm,180.0-2*thetalab);		    
     //    fflush(stdout);
-    }
-
-		if(!all_types && type>0) // only fill dp
-		  continue;		
+    } else if(type==4 && penergy<100)
+      continue;
+      
+//     if(!all_types && type>0) // only fill dp
+//       continue;		
 		  		
 		// (p,p) can be reconstructed as (d,p) here too. 
 	  //  if(type==1) // && penergy>50.0) // only with PID?
@@ -359,6 +379,9 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 	
 		if(exc<excmin || exc>excmax)
 			continue;		
+			
+    ncount[type]++;  
+			
     // now set excitation energy to get angular conversions and stuff right
     r[type]->SetExc(exc*1e-3);
 
@@ -373,8 +396,8 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 			sec_indx = 0;
 						
 		hexc[type]->Fill(exc);	
-		// sectional excitation spectra [only dp]
-		if(type==0 && !no_sec) hexc_sec[0][sec_indx]->Fill(exc);	
+		// sectional excitation spectra [only one reaction]
+		if(!no_sec) hexc_sec[sec_indx]->Fill(exc);	
 				
 		// fill the gamma energy = 0 bin with everything [including events not coincident with TIGRESS]				
 		hexcthetacm[type]->Fill(thetacm,exc);	
@@ -416,12 +439,12 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
         hgamgam[type]->Fill(eadd[j],eadd[i]);
       
 				// fill in detector section plots if required
-				if(type==0 && !no_sec){
-				  hexcgamgam_sec[0][sec_indx]->Fill(eadd[i],eadd[j],exc);				
-				  hexcgamgam_sec[0][sec_indx]->Fill(eadd[j],eadd[i],exc);		
+				if(!no_sec){
+				  hexcgamgam_sec[sec_indx]->Fill(eadd[i],eadd[j],exc);				
+				  hexcgamgam_sec[sec_indx]->Fill(eadd[j],eadd[i],exc);		
 				
-				  hgamgam_sec[0][sec_indx]->Fill(eadd[i],eadd[j]);				
-				  hgamgam_sec[0][sec_indx]->Fill(eadd[j],eadd[i]);				
+				  hgamgam_sec[sec_indx]->Fill(eadd[i],eadd[j]);				
+				  hgamgam_sec[sec_indx]->Fill(eadd[j],eadd[i]);				
         }
 			}
 			
@@ -430,7 +453,7 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 			  hphasetadd[type]->Fill(tadd[i],phase);
 			}
 			
-			if(type==0 && !no_sec) hphasetadd_sec[0][sec_indx]->Fill(tadd[i],phase);
+			if(!no_sec) hphasetadd_sec[sec_indx]->Fill(tadd[i],phase);
 			
 			if(tadd[i]<tmin || tadd[i]>tmax || eadd[i]<50.0) 
 				continue;							
@@ -450,11 +473,11 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
         hexcg[type]->Fill(exc);			
 			  hexcgamthetalab[type]->Fill(thetalab,eadd[i],exc);			
       }			
-			if(type==0 && !no_sec){
-        hexcgam_sec[0][sec_indx]->Fill(eadd[i],exc);		
-        hgam_sec[0][sec_indx]->Fill(eadd[i]);			
-        hgamthetatig_sec[0][sec_indx]->Fill(thetadd[i],eadd[i]);
-        hexcgamthetatig_sec[0][sec_indx]->Fill(thetadd[i],eadd[i],exc);			
+			if(!no_sec){
+        hexcgam_sec[sec_indx]->Fill(eadd[i],exc);		
+        hgam_sec[sec_indx]->Fill(eadd[i]);			
+        hgamthetatig_sec[sec_indx]->Fill(thetadd[i],eadd[i]);
+        hexcgamthetatig_sec[sec_indx]->Fill(thetadd[i],eadd[i],exc);			
 			}
 		}
 		
@@ -467,7 +490,6 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
     list[0]->Add(h2);
     list[0]->Add(h);
 	}
-	
 
   printf("\n\t Complete!\n\n\n Now writing results to file:-\n");
 	fflush(stdout);
@@ -477,51 +499,45 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 	  outfilename.assign(Form("Results_%s.root",treename.c_str()));
 	
 	file = new TFile(outfilename.c_str(),"RECREATE");	
-	
 	file->SetCompressionLevel(1);
 	
-	file->mkdir("dp");
-	file->cd("dp");	
-	list[0]->Write();
-	printf("\n -> Wrote list to ' dp '");
-	fflush(stdout);
+  for(int i=0; i<5; i++){
+    
+    printf("\n Number of ' %s ' events : %i",opt.at(i).c_str(),ncount[i]);
+  
+    if(opt.at(i).length()<2)
+      continue;
+		file->cd("/");	
+    file->mkdir(opt.at(i).c_str());
+    file->cd(opt.at(i).c_str());	
+    list[i]->Write();
+    printf("\n -> Wrote list to ' %s '",opt.at(i).c_str());
+    fflush(stdout);
+  }
 	
 	if(!no_sec){
     file->cd("/");		
-    file->mkdir("dp/UQ");
-    file->cd("dp/UQ");		
-    list_sec[0][0]->Write();
-    printf("\n -> Wrote list to ' dp/UQ '");
+    file->mkdir(Form("%s/UQ",opt.at(0).c_str()));
+    file->cd(Form("%s/UQ",opt.at(0).c_str()));
+    list_sec[0]->Write();
+    printf("\n -> Wrote list to ' %s/UQ '",opt.at(0).c_str());
     fflush(stdout);	
   
     file->cd("/");		
-    file->mkdir("dp/UB");
-    file->cd("dp/UB");	
-    list_sec[0][1]->Write();	
-    printf("\n -> Wrote list to ' dp/UB '");
+    file->mkdir(Form("%s/UB",opt.at(0).c_str()));
+    file->cd(Form("%s/UB",opt.at(0).c_str()));
+    list_sec[1]->Write();
+    printf("\n -> Wrote list to ' %s/UB '",opt.at(0).c_str());
     fflush(stdout);	
-  
+    
     file->cd("/");		
-    file->mkdir("dp/DB");
-    file->cd("dp/DB");		
-    list_sec[0][2]->Write();	
-    printf("\n -> Wrote list to ' dp/DB '");
+    file->mkdir(Form("%s/DB",opt.at(0).c_str()));
+    file->cd(Form("%s/DB",opt.at(0).c_str()));
+    list_sec[2]->Write();
+    printf("\n -> Wrote list to ' %s/DB '",opt.at(0).c_str());
     fflush(stdout);	
 	}
 	
-	if(all_types){	
-		file->cd("/");	
-		file->mkdir("pp");
-		file->cd("pp");	
-		list[1]->Write();	
-    printf("\n -> Wrote list to ' pp '");
-	
-		file->cd("/");	
-		file->mkdir("dd");
-		file->cd("dd");		
-		list[2]->Write();	
-		printf("\n -> Wrote list to ' dd '");	
-	}	
 
 	file->cd("/");		
 	file->mkdir("Acceptances");
@@ -538,5 +554,5 @@ Int_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", s
 	
 	file->Close();
 	
-  return 0;		
+  return true;		
 }
