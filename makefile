@@ -1,7 +1,7 @@
 
 OBJECTS = TTigressAnalysis.o TTigressAnalysisDict.o 
 
-GRSISYS=/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/GRSISort
+#GRSISYS=/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/GRSISort
 
 CFLAGS += -I$(GRSISYS)/include -L$(GRSISYS)/libraries -fPIC -I $(GRSISYS)/include/
 
@@ -48,7 +48,7 @@ export SHAREDSWITCH = -install_name # ENDING SPACE
 export CPP = xcrun clang++ 
 #else
 #export __LINUX__:= 1	
-#export CFLAGS += -stdlib=libc++ -m64 -I/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/root/include 
+#export CFLAGS += -stdlib=libc++ -m64 -I$(ROOTSYS)/include 
 #export SHAREDSWITCH = -shared -Wl,-soname,#NO ENDING SPACE
 #export CPP = g++
 #endif

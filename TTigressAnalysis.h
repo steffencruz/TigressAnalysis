@@ -17,7 +17,7 @@
 #include <map>
 
 #ifndef TIGDIR
-#define TIGDIR "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/TigressAnalysis"
+#define TIGDIR "$PROGDIR/TigressAnalysis"
 #endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -241,14 +241,14 @@ class TTigressAnalysis 	{
 	  static Bool_t ReadIntensities(const char *fname = "SavedIntensities.txt");
 	  static void WriteIntensities(const char *fname = "SavedIntensities.txt");
 
-	  static TH1D *DrawGammas(Int_t from_state, Double_t egam=0.0);
-		static TH1D *DrawGammasGated(Double_t exmin=-1.0, Double_t exmax=-1.0, Double_t egam=-1.0);
-    static TH2F *DrawExcGam(Double_t egam=-1.0, Bool_t use_int=false);	
+	  static TH1D *CalcGammas(Int_t from_state, Double_t egam=0.0);
+		static TH1D *CalcGammas(Double_t exmin=-1.0, Double_t exmax=-1.0, Double_t egam=0.0);
+    static TH2F *CalcExcGam(Double_t egam=-1.0, Bool_t use_int=false);	
 
-	  static TH1D *MakeRealistic(int from_state, Double_t egam=0.0, Int_t color=1);
-	  static TH1D *MakeRealistic(TH1D *hgam, Bool_t abseff = false);
+	  static TH1D *RealisticCalcGammas(int from_state, Double_t egam=0.0, Int_t color=1);
+	  static TH1D *RealisticCalcGammas(TH1D *hgam, Bool_t abseff = false);
 				
-		static TH1D *DrawIntensitites(){ return hint; }				
+		static TH1D *DrawCalcIntensitites(){ return hint; }				
 		static Double_t BranchingRatio(Double_t state_eng, Double_t egam);			
 	
 	private:

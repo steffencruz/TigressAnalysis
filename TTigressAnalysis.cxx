@@ -1060,7 +1060,7 @@ TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Doub
 	if(from_state<=0)
 	  return hdata;
 	  
-  TH1D *hthry_tmp = DrawGammas(from_state,egam);
+  TH1D *hthry_tmp = CalcGammas(from_state,egam);
   if(hthry_tmp->GetEntries()==0){
     printf("\n\t No gamma-rays could be found in coincidence with %.1f keV.\n",egam);
     return hdata;
@@ -1074,7 +1074,7 @@ TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Doub
   }
   printf("\n\n");
   // add realistic width and apply efficiency
-  TH1D *hthry = MakeRealistic(hthry_tmp,true);
+  TH1D *hthry = RealisticCalcGammas(hthry_tmp,true);
   hthry->SetLineColor(kRed);
   
   Double_t reb = bin/hthry->GetBinWidth(1);
@@ -1955,7 +1955,7 @@ Double_t TTigressAnalysis::BranchingRatio(Double_t state_eng, Double_t egam){
 		return 0;
 	
 	Double_t eng1 = energies.at(from_state);	
-  TH1D *hg = DrawGammas(from_state+1); // uses gamma spectrum
+  TH1D *hg = CalcGammas(from_state+1); // uses gamma spectrum
   //hg->Draw();
   Double_t val = hg->Integral((int)egam-1,(int)egam+1);
 	if(!val){
@@ -2013,7 +2013,7 @@ void TTigressAnalysis::FixIntensities(Double_t emin, Double_t emax, Double_t ega
 		
 	// get theory spectrum with uniform population of all states	
 	// this	spectrum is made up of delta function peaks
-		TH1D *h = DrawGammasGated(emin,emax,egam);
+		TH1D *h = CalcGammas(emin,emax,egam);
 		if(!h)
 			return;
 		
@@ -2045,7 +2045,7 @@ void TTigressAnalysis::FixIntensities(Double_t emin, Double_t emax, Double_t ega
 			s.assign(htmp->GetTitle());
 			str.push_back(atof(s.substr(s.length()-6,5).c_str()));
 									
-			htmp2 = MakeRealistic(htmp,true);
+			htmp2 = RealisticCalcGammas(htmp,true);
 			htmp2->Scale(effcorr); // coincidences lower the efficiency further
 						
 			htmp2->SetLineColor(htmp->GetLineColor());
@@ -2175,7 +2175,7 @@ void TTigressAnalysis::WriteIntensities(const char *fname){
 	ofile.close();
 }
 
-TH1D *TTigressAnalysis::DrawGammas(Int_t from_state, Double_t egam){
+TH1D *TTigressAnalysis::CalcGammas(Int_t from_state, Double_t egam){
 	
 	if(from_state>energies.size()){
 		printf("\n State ' %i ' out of range [max = %lu].\n",from_state,energies.size());	
@@ -2281,7 +2281,7 @@ TH1D *TTigressAnalysis::DrawGammas(Int_t from_state, Double_t egam){
 	return hgcalc;
 }
 
-TH1D *TTigressAnalysis::DrawGammasGated(Double_t emin, Double_t emax, Double_t egam){
+TH1D *TTigressAnalysis::CalcGammas(Double_t emin, Double_t emax, Double_t egam){
 
 	const char *name = Form("GammaSpectra%s%s",emin>=0&&emax>emin?Form("_Exc%.1fTo%.1f",emin,emax):"",egam>0?Form("_Gam%.1f",egam):"");
 	TH1D *h = (TH1D*)list->FindObject(name);
@@ -2337,7 +2337,7 @@ TH1D *TTigressAnalysis::DrawGammasGated(Double_t emin, Double_t emax, Double_t e
 	TH1D *hgcalc;
 	Int_t n=1;
 	for(int i=0; i<(Int_t)states.size(); i++){
-		hgcalc = DrawGammas(states.at(i),egam);
+		hgcalc = CalcGammas(states.at(i),egam);
 		if(!hgcalc)
 			continue;
 
@@ -2393,7 +2393,7 @@ TH1D *TTigressAnalysis::DrawGammasGated(Double_t emin, Double_t emax, Double_t e
 	return h;
 }
 
-TH2F *TTigressAnalysis::DrawExcGam(Double_t egam, Bool_t use_int){
+TH2F *TTigressAnalysis::CalcExcGam(Double_t egam, Bool_t use_int){
 
 	const char *name = Form("ExcGam%s%s",egam>0?Form("_Gam%.1f",egam):"",use_int?"_UsingSetIntensities":"");
 	TH2F *h = (TH2F*)list->FindObject(name);
@@ -2427,11 +2427,11 @@ TH2F *TTigressAnalysis::DrawExcGam(Double_t egam, Bool_t use_int){
 	for(int i=0; i<(Int_t)states.size(); i++){
     printf("\t Progress... %4.2f %%\r",(Double_t)i/(Double_t)states.size()*100.0);     
 	  fflush(stdout);
-		hgcalc = DrawGammas(states.at(i),egam);
+		hgcalc = CalcGammas(states.at(i),egam);
 		if(!hgcalc)
 			continue;
     energy = energies.at(states.at(i)-1);
-    hgcalc = MakeRealistic(hgcalc); // include realistic gamma peak width
+    hgcalc = RealisticCalcGammas(hgcalc); // include realistic gamma peak width
 
     if(use_int && hint)
       scale = hint->GetBinContent(states.at(i));
@@ -2482,7 +2482,7 @@ TCanvas *TTigressAnalysis::DrawDecayMats(Int_t from_state, Bool_t engaxis){
 	ff->Draw("same");
 	
 	c->cd(2);
-	//DrawGammas(from_state)->Draw();
+	//CalcGammas(from_state)->Draw();
 	THStack *hdecay = GetDecayScheme(from_state,engaxis);
 	hdecay->Draw("nostack"); // first draw is necessary
 	hdecay->SetTitle(Form("Cascades From State %i : %.1f keV ; Cascade Number; State %s",from_state,energies.at(from_state-1),engaxis?"E_{#gamma}^{thry} [keV]":"Number"));
@@ -2743,7 +2743,7 @@ void TTigressAnalysis::DrawTransitions(int from_state, Bool_t engaxis){
 	return;
 }
 
-TH1D *TTigressAnalysis::MakeRealistic(int from_state, Double_t egam, Int_t color){
+TH1D *TTigressAnalysis::RealisticCalcGammas(int from_state, Double_t egam, Int_t color){
 
   if(!energies.size()){
     verbose = false;
@@ -2760,7 +2760,7 @@ TH1D *TTigressAnalysis::MakeRealistic(int from_state, Double_t egam, Int_t color
     SetResolutionCurve();
   }  
   
-  TH1D *hgcalc = DrawGammas(from_state,egam);
+  TH1D *hgcalc = CalcGammas(from_state,egam);
   if(!hgcalc)
     return hgcalc;
   
@@ -2795,7 +2795,7 @@ TH1D *TTigressAnalysis::MakeRealistic(int from_state, Double_t egam, Int_t color
 	return htmp;
 }
 
-TH1D *TTigressAnalysis::MakeRealistic(TH1D *hgcalc, Bool_t abseff){
+TH1D *TTigressAnalysis::RealisticCalcGammas(TH1D *hgcalc, Bool_t abseff){
 
   if(!fTigSigma){
     printf("\n\n Error : Energy resolution must be set first.\n\n");
