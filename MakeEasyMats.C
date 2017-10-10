@@ -335,7 +335,7 @@ Bool_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", 
 	Double_t excr;
   double d2r = 0.017453;
   double r2d = 57.2958;			
-  UInt_t ncount[5];
+  Int_t ncount[5];
 
 	for(int n=0; n<nentries; n++){
 	
@@ -355,6 +355,12 @@ Bool_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", 
 		
 		if(dcharge-dchargeb>maxchgdiff || dcharge-dchargeb<minchgdiff)
   		continue;
+  		
+    if(type==4){
+      if(denergy>8000) continue; // no (d,t) tritons can have this much energy - always throw out 	
+      if(penergy>0)    continue; // this will stop tritons with pad PID
+//      if(penergy<100)  continue; // this will stop tritons withOUT pad PID
+    }         	       	
 		
 		hkin->Fill(thetalab,ekin);
 		if(type==1 || type==2 || type==3){ // elastics must assume no excitation energy
@@ -363,9 +369,7 @@ Bool_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", 
 		    hdengcm->Fill(thetacm,denergy);
 		//    printf("\n %i type == %i thetalab = %.1f   thetacm = %.1f  180-2*thetalab = %.1f",n,type,thetalab,thetacm,180.0-2*thetalab);		    
     //    fflush(stdout);
-    } else if(type==4 && penergy<100)
-      continue;
-      
+    }       
 //     if(!all_types && type>0) // only fill dp
 //       continue;		
 		  		

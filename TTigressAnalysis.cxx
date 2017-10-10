@@ -1141,7 +1141,7 @@ Double_t TTigressAnalysis::GetPopulationStrength(TH1D *hist, Double_t exc, Doubl
   return strength;
 }
 
-TList *TTigressAnalysis::FitTigThetaSlices(Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Double_t exc_lo, Double_t exc_hi, Bool_t bg_only, Bool_t quad_fit, int rebx, int reby){
+TList *TTigressAnalysis::FitTigThetaSlices(Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Double_t exc_lo, Double_t exc_hi, Bool_t bg_only, Bool_t quad_fit, int rebx, int reby, Bool_t cosx){
 
   TList *list = new TList;
   
@@ -1200,7 +1200,7 @@ TList *TTigressAnalysis::FitTigThetaSlices(Double_t egam, Double_t emin, Double_
   TH1D *h1;
   list->Add(htmp);
   
-  Double_t theta, cnts_tot, cnts_rng;
+  Double_t theta, cos_th, cnts_tot, cnts_rng;
   Double_t cnts_peak, cerr_peak, mean_peak, merr_peak, fwhm_peak, ferr_peak, chi2_peak;  
   Double_t d2r = TMath::DegToRad(), mincnt = 30; // minimum total counts in a spectrum range bg0-bg3
   TF1 *func;
@@ -1245,20 +1245,35 @@ TList *TTigressAnalysis::FitTigThetaSlices(Double_t egam, Double_t emin, Double_
     list->Add(h1);    
     
     cerr_peak = sqrt(cnts_rng);
+//    cerr_peak = func->GetParError(2);
     n++;    
-    
-    gcnts->SetPoint(n,theta,cnts_peak);
-    gcnts->SetPointError(n,therr,cerr_peak);   
-    
-    gcnts_rng->SetPoint(n,theta,cnts_peak/cnts_rng);
-    gcnts_rng->SetPointError(n,therr,cerr_peak/cnts_rng);   
-    
-    gcnts_p2t->SetPoint(n,theta,cnts_peak/cnts_tot);
-    gcnts_p2t->SetPointError(n,therr,cerr_peak/cnts_tot);           
-    
     chi2_peak = func->GetChisquare()/func->GetNDF();    
-    gchi2->SetPoint(n,theta,chi2_peak);         
-     
+    cos_th = cos(TMath::DegToRad()*theta);
+    
+    if(cosx){
+      gcnts->SetPoint(n,cos_th,cnts_peak);
+      gcnts->SetPointError(n,0,cerr_peak);   
+    
+      gcnts_rng->SetPoint(n,cos_th,cnts_peak/cnts_rng);
+      gcnts_rng->SetPointError(n,0,cerr_peak/cnts_rng);   
+    
+      gcnts_p2t->SetPoint(n,cos_th,cnts_peak/cnts_tot);
+      gcnts_p2t->SetPointError(n,0,cerr_peak/cnts_tot);           
+    
+      gchi2->SetPoint(n,theta,chi2_peak);         
+    
+    } else{
+      gcnts->SetPoint(n,theta,cnts_peak);
+      gcnts->SetPointError(n,therr,cerr_peak);   
+    
+      gcnts_rng->SetPoint(n,theta,cnts_peak/cnts_rng);
+      gcnts_rng->SetPointError(n,therr,cerr_peak/cnts_rng);   
+    
+      gcnts_p2t->SetPoint(n,theta,cnts_peak/cnts_tot);
+      gcnts_p2t->SetPointError(n,therr,cerr_peak/cnts_tot);           
+    
+      gchi2->SetPoint(n,theta,chi2_peak);         
+    } 
     if(bg_only)
       continue; // we don't have access to any other variables if we only fit bg    
     
@@ -1267,11 +1282,19 @@ TList *TTigressAnalysis::FitTigThetaSlices(Double_t egam, Double_t emin, Double_
     fwhm_peak = 2.355*func->GetParameter(4);
     ferr_peak = 2.355*func->GetParError(4);
     
-    gmean->SetPoint(n,theta,mean_peak);
-    gmean->SetPointError(n,therr,merr_peak);  
+    if(cosx){
+      gmean->SetPoint(n,cos_th,mean_peak);
+      gmean->SetPointError(n,0,merr_peak);  
     
-    gfwhm->SetPoint(n,theta,fwhm_peak);
-    gfwhm->SetPointError(n,therr,ferr_peak); 
+      gfwhm->SetPoint(n,cos_th,fwhm_peak);
+      gfwhm->SetPointError(n,0,ferr_peak); 
+    } else {
+      gmean->SetPoint(n,theta,mean_peak);
+      gmean->SetPointError(n,therr,merr_peak);  
+    
+      gfwhm->SetPoint(n,theta,fwhm_peak);
+      gfwhm->SetPointError(n,therr,ferr_peak);
+    }    
          
   }
   

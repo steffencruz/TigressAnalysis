@@ -17,7 +17,7 @@
 #include <map>
 
 #ifndef TIGDIR
-#define TIGDIR "$PROGDIR/TigressAnalysis"
+#define TIGDIR "/Users/steffencruz/Desktop/Steffen/Work/PhD/TRIUMF/CodesAndTools/TigressAnalysis"
 #endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -132,7 +132,7 @@ class TTigressAnalysis 	{
 											Double_t bg2=0.0, Double_t bg3=0.0,
 											Double_t exmin=-1.0, Double_t exmax=-1.0,
                       Bool_t bg_only=false, Bool_t quad_fit=false,
-                      int rebx=1, int reby=1);
+                      int rebx=1, int reby=1, Bool_t cosx=false);
 																					
 
 		static void SetBackgroundLims(Double_t emin, Double_t emax, 
