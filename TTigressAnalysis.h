@@ -2,7 +2,7 @@
 #define TTIGRESSANALYSIS_H
 
 #include<TObject.h>
-#include<RTypes.h>
+#include<Rtypes.h>
 #include<TList.h>
 
 #include<TH3S.h>
