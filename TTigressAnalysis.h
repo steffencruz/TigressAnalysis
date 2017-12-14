@@ -145,6 +145,13 @@ class TTigressAnalysis 	{
                                               Double_t emin=0.0, Double_t emax=0.0, 
                                               Double_t bg0=0.0, Double_t bg1=0.0, 
                                               Double_t bg2=0.0, Double_t bg3=0.0);
+
+    static TGraphErrors *ScanExcEnergy(Double_t exc_min, Double_t exc_max, 
+                                Double_t egam, UInt_t nsteps=16,
+                                Double_t emin=0.0, Double_t emax=0.0,     
+                                Double_t bg0=0.0, Double_t bg1=0.0, 
+                                Double_t bg2=0.0, Double_t bg3=0.0,
+                                Bool_t bg_only=true);
     
     static TList *CheckDopplerCorrection(Double_t egam, TH2F *h2=NULL,
                       Double_t emin=0.0, Double_t emax=0.0,
@@ -160,7 +167,7 @@ class TTigressAnalysis 	{
 		
 		static TGraphErrors *GetEfficiencyCurve(void){ return gTigEff; }
 		
-		static Double_t Efficiency(Double_t eng);
+		static Double_t Efficiency(Double_t eng, Double_t rel_cor=1.05);
 		
 		static Double_t EfficiencyError(Double_t eng);	
 		

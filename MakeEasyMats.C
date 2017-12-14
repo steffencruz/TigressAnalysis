@@ -331,13 +331,15 @@ Bool_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", 
   printf("\n TIGTHETA :   tigtheta [deg] > %.2f\n",thmin);  
 
 	printf("\n\n Filling histograms:-\n\n");
-	Int_t nentries=chain->GetEntries(), sec_indx;	
+	Int_t nmin=0, nentries=chain->GetEntries(), sec_indx;	
+	if(A==96)
+	  nmin = 1.14e6;
 	Double_t excr;
   double d2r = 0.017453;
   double r2d = 57.2958;			
   Int_t ncount[5];
 
-	for(int n=0; n<nentries; n++){
+	for(int n=nmin; n<nentries; n++){
 	
 		chain->GetEntry(n);
 		
@@ -348,6 +350,9 @@ Bool_t MakeEasyMats(UInt_t A, std::string treename = "$DATADIR/redwood_Sr95_*", 
 		
   	if(opt.at(type).length()<2)
   	  continue;		// if 'type' was not included in specified reactions, continue
+		
+		if(ekin<2000) // TEMPORARY CUT TO GET RID OF BETAS [3RD NOV 2017]
+		  continue;
 		
 		// fill hist excluding dead strips and other options
 		if(TSharcAnalysis::BadStrip(det,front,-1) || TSharcAnalysis::BadStrip(det,-1,back))

@@ -1106,6 +1106,60 @@ TH1D *TTigressAnalysis::FitTheory(TH1D *hdata, Double_t exc, Double_t egam, Doub
   return hthry;
 }
 
+TGraphErrors *TTigressAnalysis::ScanExcEnergy(Double_t exc_min, Double_t exc_max, Double_t egam, UInt_t nsteps, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3, Bool_t bg_only){
+
+  Double_t elo = exc_min, ehi, cnts, tot_cnts;
+  Double_t estep = (exc_max-exc_min)/(double)nsteps;
+  TH1D *hgam;
+  Double_t eff = Efficiency(egam);  
+  TGraphErrors *ge = new TGraphErrors();
+  ge->SetName(Form("EnergyScan%.0f",egam));
+  ge->SetTitle(Form("Energy scan for %.0f keV #gamma-ray; E_{x} [keV]; Peak counts %s",egam,eff>0?"":"with efficiency correction"));
+  
+  
+  TList *list_scan = new TList;
+  list_scan->Add(ge);
+  
+  TCanvas *c = new TCanvas("Results_ExcEnergyScanProjections","Results_ExcEnergyScanProjections",800,700);
+  c->Divide(4,4);
+  
+  for(int i=0; i<nsteps; i++){
+  
+    ehi = elo+estep*(i+1);
+    
+    c->cd(i+1);
+    hgam = Gam(elo,ehi);
+    tot_cnts = hgam->Integral(hgam->GetXaxis()->FindBin(emin),hgam->GetXaxis()->FindBin(emax));
+    if(tot_cnts<100)
+      hgam->Rebin(2);
+    if(tot_cnts<30)
+      hgam->Rebin(4);      
+      
+    hgam->SetName(Form("Gam_%.0f_%.0f",elo,ehi));
+    hgam->Draw();
+    
+    list_scan->Add(hgam);
+    cnts = FitPeakStats(hgam,emin,emax,bg0,bg1,bg2,bg3,bg_only); // bg subtraction only
+    if(cnts<=0)
+      cnts=0;
+
+    if(eff){      
+      // apply efficiency correction to counts        
+      ge->SetPoint(i,ehi,cnts/eff);
+      ge->SetPointError(i,0,sqrt(cnts)/eff);    
+    } else {
+      // apply no efficiency correction        
+      ge->SetPoint(i,ehi,cnts);
+      ge->SetPointError(i,0,sqrt(cnts));        
+    }
+  }
+  
+  TCanvas *c2 = new TCanvas("Results_ExcEnergyScanGraph","Results_ExcEnergyScanGraph",500,500);
+  ge->Draw("APL");
+  
+  return ge;
+}
+
 Double_t TTigressAnalysis::GetPopulationStrength(TH1D *hist, Double_t exc, Double_t egam, Double_t emin, Double_t emax, Double_t bg0, Double_t bg1, Double_t bg2, Double_t bg3){
   
   if(!hist){
@@ -1610,13 +1664,23 @@ TCanvas *TTigressAnalysis::SetEfficiencyCurve(const char *efname, Double_t engab
   return canvas;
 }
 
-Double_t TTigressAnalysis::Efficiency(Double_t eng){
+Double_t TTigressAnalysis::Efficiency(Double_t eng, Double_t rel_cor){
 
 	if(!fTigEff){
 		printf("\n\t Warning :  Tigress Efficiency has not been set!\n\n");
 		return 0.0;
 	}
-	return fTigEff->Eval(eng)*0.01; 
+	
+	Double_t eff = fTigEff->Eval(eng)*0.01;
+// The relativistic headlight effect 'focuses' the gammas from the recoil so that the 
+// intensity is larger in the +ve z direction and smaller in the -ve z direction
+// -> we use tigress detectors which are >=90 degrees and so they see less intensity
+// -> we account for this using an additional scaling factor which corrects for the lower
+// backward angle intensity. 1.05 appears to be a reasonable correction
+// -> with this 1/rel_cor factor, we lower the efficiency of tigress so it is corrected for
+// as a larger value
+
+  return eff/rel_cor; 	  
 }
 
 Double_t TTigressAnalysis::EfficiencyError(Double_t eng){
@@ -1867,7 +1931,6 @@ Bool_t TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 			printf("\n\t! Error :  Final state %.1f not valid !\n\n",final);
 			continue;
 		}
-				
 		htmp->SetBinContent(nstates,statenum,intensity);	// fill intensity-transition matrix	
 		if(maxgam<egamma)
 			maxgam = egamma;
@@ -1886,10 +1949,12 @@ Bool_t TTigressAnalysis::LoadLevelsGammas(std::string fname, int nmax){
 	htrans = new TH2F("TransitionMat","",nstates,0,nstates,nstates,0,nstates);
 	htrans->SetTitle("Transition Intensity Matrix; Initial State; Final State");
 	
-	for(int i=1; i<=nstates; i++) // go to the maximum row
-		for(int j=1; j<=i; j++) // go up to the diagonal
+	for(int i=1; i<=nstates; i++){ // go to the maximum row
+		for(int j=1; j<=i; j++){ // go up to the diagonal
+//		  printf("\n Transition strength for %i to %i transition : %.2f\n",i,j,htmp->GetBinContent(i,j));
 			htrans->SetBinContent(i,j,htmp->GetBinContent(i,j));
-	
+	  }
+  }
 	htrans->Scale(1./htrans->GetMaximum()); // normalize to max strength 1
 
 	GetRid("GammasMat");
@@ -2259,6 +2324,8 @@ TH1D *TTigressAnalysis::CalcGammas(Int_t from_state, Double_t egam){
 			for(int i=1; i<final; i++)
 			  if(htmpf->GetBinContent(i)>0)
 			    nbranches+=1.0;
+			  
+			    
 			// we want to make sure that the sum of all branches from a state are 1.    
 			if(nbranches>1.0)  
         strength /= nbranches;
